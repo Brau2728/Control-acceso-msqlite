@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <Platforms>AnyCPU;x64</Platforms>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.2" />
+    <PackageReference Include="System.Data.SqlClient" Version="4.9.1" />
+    <PackageReference Include="System.Data.SQLite" Version="2.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="DPFPDevNET">
+      <HintPath>..\..\..\OneDrive\Escritorio\temporal\DPFPDevNET.dll</HintPath>
+    </Reference>
+    <Reference Include="DPFPEngNET">
+      <HintPath>..\..\..\OneDrive\Escritorio\temporal\DPFPEngNET.dll</HintPath>
+    </Reference>
+    <Reference Include="DPFPShrNET">
+      <HintPath>..\..\..\OneDrive\Escritorio\temporal\DPFPShrNET.dll</HintPath>
+    </Reference>
+    <Reference Include="DPFPVerNET">
+      <HintPath>..\..\..\OneDrive\Escritorio\temporal\DPFPVerNET.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>

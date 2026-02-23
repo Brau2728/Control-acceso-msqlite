@@ -1,0 +1,77 @@
+﻿<Window x:Class="prueba1.PanelAdminWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Panel de Administración - SICB-GAN" Height="600" Width="900"
+        WindowStartupLocation="CenterScreen" Background="#F0F2F5">
+
+    <Window.Resources>
+        <Style x:Key="BotonMenu" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Padding" Value="20,0,0,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="250"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Border Grid.Column="0" Background="#00204A">
+            <StackPanel Margin="0,30,0,0">
+                <TextBlock Text="👤" FontSize="50" Foreground="#D4AF37" HorizontalAlignment="Center"/>
+                <TextBlock Text="ADMINISTRADOR" Foreground="White" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,10,0,30"/>
+
+                <Button Content="📝 NUEVO REGISTRO" Height="50" Click="BtnNuevoRegistro_Click" Style="{StaticResource BotonMenu}"/>
+                <Button Content="📂 DIRECTORIO PERSONAL" Height="50" Click="BtnDirectorio_Click" Style="{StaticResource BotonMenu}"/>
+                <Button Content="📊 VER REPORTES" Height="50" Style="{StaticResource BotonMenu}"/>
+
+                <Border Height="150"/> 
+                
+                <Button Content="🚪 CERRAR SESIÓN" Click="BtnCerrarSesion_Click" Height="50" Background="#D4AF37" Foreground="#00204A" FontWeight="Bold" Margin="20,0" Cursor="Hand"/>
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Column="1" Background="White">
+            <StackPanel x:Name="PanelBienvenida" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <TextBlock Text="SISTEMA DE MANDO" Foreground="#00204A" FontSize="36" FontWeight="Black" HorizontalAlignment="Center"/>
+                <TextBlock Text="Seleccione una opción del menú" Foreground="Gray" FontSize="18" HorizontalAlignment="Center"/>
+            </StackPanel>
+
+            <Grid x:Name="PanelDirectorio" Visibility="Collapsed" Margin="20">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <TextBlock Text="PERSONAL NAVAL REGISTRADO" FontSize="22" FontWeight="Bold" Foreground="#00204A" Margin="0,0,0,10"/>
+                
+                <DataGrid x:Name="dgPersonal" Grid.Row="1" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" HeadersVisibility="Column">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Matrícula" Binding="{Binding Matricula}" Width="*"/>
+                        <DataGridTextColumn Header="Grado" Binding="{Binding Grado}" Width="*"/>
+                        <DataGridTextColumn Header="Nombre" Binding="{Binding Nombre}" Width="2*"/>
+                        <DataGridTextColumn Header="Apellidos" Binding="{Binding Apellidos}" Width="2*"/>
+                        <DataGridTextColumn Header="Jefatura" Binding="{Binding Jefatura}" Width="*"/>
+                        <DataGridTextColumn Header="Situación" Binding="{Binding Novedad}" Width="*"/>
+                        <DataGridTemplateColumn Header="Acciones" Width="*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Content="✏️ Editar" Background="#D4AF37" Foreground="#00204A" 
+                                            FontWeight="Bold" BorderThickness="0" Cursor="Hand" Margin="5,2"
+                                            Click="BtnEditarRegistro_Click" CommandParameter="{Binding Matricula}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

@@ -1,0 +1,103 @@
+<Window x:Class="prueba1.RegistroPersonal"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Alta de Personal Naval" Height="500" Width="800"
+        WindowStartupLocation="CenterScreen" ResizeMode="NoResize" Background="#F5F5F5">
+    
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="250"/> <ColumnDefinition Width="*"/>   </Grid.ColumnDefinitions>
+
+        <Border Grid.Column="0" Background="#00204A">
+    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+        
+        <Border Width="150" Height="180" Background="White" CornerRadius="5" Margin="0,0,0,10" ClipToBounds="True">
+            <Image x:Name="imgFoto" Stretch="Uniform" RenderTransformOrigin="0.5,0.5">
+                <Image.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform x:Name="stEscala" ScaleX="1" ScaleY="1"/>
+                        <RotateTransform x:Name="rtRotacion" Angle="0"/>
+                    </TransformGroup>
+                </Image.RenderTransform>
+            </Image>
+        </Border>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,15">
+            <Button Content="↺" Width="30" Height="30" Margin="2" Click="BtnRotarIzq_Click" 
+                    ToolTip="Rotar Izquierda" FontWeight="Bold" FontSize="16"/>
+            <Button Content="↻" Width="30" Height="30" Margin="2" Click="BtnRotarDer_Click" 
+                    ToolTip="Rotar Derecha" FontWeight="Bold" FontSize="16"/>
+            <Button Content="-" Width="30" Height="30" Margin="2" Click="BtnZoomOut_Click" 
+                    ToolTip="Alejar" FontWeight="Bold" FontSize="16"/>
+            <Button Content="+" Width="30" Height="30" Margin="2" Click="BtnZoomIn_Click" 
+                    ToolTip="Acercar" FontWeight="Bold" FontSize="16"/>
+        </StackPanel>
+
+        <Button Content="SELECCIONAR FOTO" Width="150" Height="30" Click="BtnFoto_Click"/>
+        
+        <TextBlock Text="Usa los controles para ajustar la foto antes de guardar." 
+                   Foreground="Gray" FontSize="10" TextWrapping="Wrap" 
+                   TextAlignment="Center" Margin="10,10,10,0"/>
+    </StackPanel>
+</Border>
+
+        <StackPanel Grid.Column="1" Margin="30">
+            <TextBlock Text="NUEVO REGISTRO" FontSize="24" FontWeight="Bold" Foreground="#00204A" Margin="0,0,0,20"/>
+
+            <TextBlock Text="Matrícula Oficial:" FontWeight="Bold"/>
+            <TextBox x:Name="txtMatricula" Height="30" Margin="0,0,0,15" MaxLength="20"/>
+
+            <TextBlock Text="Nombres:" FontWeight="Bold"/>
+            <TextBox x:Name="txtNombres" Height="30" Margin="0,0,0,15" CharacterCasing="Upper"/>
+
+            <TextBlock Text="Apellidos:" FontWeight="Bold"/>
+            <TextBox x:Name="txtApellidos" Height="30" Margin="0,0,0,15" CharacterCasing="Upper"/>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Grado:" FontWeight="Bold"/>
+                    <ComboBox x:Name="cmbGrado" Height="30" IsEditable="False">
+                       <ComboBoxItem Content="Otro" Tag="1"/>
+                       <ComboBoxItem Content="Marinero" Tag="2"/>
+                        <ComboBoxItem Content="Cabo" Tag="3"/>
+                        <ComboBoxItem Content="Tercer Maestre" Tag="4"/>
+                        <ComboBoxItem Content="Segundo Maestre" Tag="5"/>
+                        <ComboBoxItem Content="Primer Maestre" Tag="6"/>
+                        <ComboBoxItem Content="Teniente de Corbeta" Tag="7"/>
+                        <ComboBoxItem Content="Teniente de Fragata" Tag="8"/>
+                        <ComboBoxItem Content="Teniente de Navío" Tag="9"/>
+                        <ComboBoxItem Content="Capitán de Corbeta" Tag="10"/>
+                        <ComboBoxItem Content="Capitán de Fragata" Tag="11"/>
+                        <ComboBoxItem Content="Capitán de Navío" Tag="12"/>
+                        <ComboBoxItem Content="Contralmirante" Tag="13"/>
+                        <ComboBoxItem Content="Vicealmirante" Tag="14"/>
+                        <ComboBoxItem Content="Almirante" Tag="15"/>
+                    </ComboBox>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="Jefatura / Adscripción:" FontWeight="Bold"/>
+                    <ComboBox x:Name="cmbJefatura" Height="30" IsEditable="False">
+                        <ComboBoxItem Content="Otro" Tag="1"/>
+                        <ComboBoxItem Content="Talleres" Tag="2"/>
+                        <ComboBoxItem Content="Servicios" Tag="3"/>
+                        <ComboBoxItem Content="Detall" Tag="4"/>
+                         <ComboBoxItem Content="Comunav" Tag="5"/>
+                    </ComboBox>
+                </StackPanel>
+            </Grid>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,40,0,0">
+                <Button Content="CANCELAR" Width="100" Height="40" Background="Gray" Foreground="White" Margin="0,0,10,0" Click="BtnCancelar_Click"/>
+                <Button Content="GUARDAR REGISTRO" Width="150" Height="40" Background="#00204A" Foreground="White" FontWeight="Bold" Click="BtnGuardar_Click"/>
+            </StackPanel>
+            
+        </StackPanel>
+    </Grid>
+</Window>
