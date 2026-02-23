@@ -1,4 +1,6 @@
-﻿namespace prueba1
+﻿using System.Windows.Media;
+
+namespace prueba1
 {
     public class Marino
     {
@@ -9,7 +11,9 @@
         public string CuerpoServicio { get; set; } = string.Empty;
         public string Jefatura { get; set; } = string.Empty;
         public string EstadoAsistencia { get; set; } = "PRESENTE";
-        public string FotoPath { get; set; } = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
+        
+        // Propiedad para cargar la imagen en la interfaz
+        public ImageSource? FotoImagen { get; set; }
 
         public string NombreCompleto => $"{Nombre} {Apellidos}";
     }

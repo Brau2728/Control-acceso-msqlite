@@ -9,23 +9,19 @@
         WindowState="Maximized" 
         WindowStyle="None"
         Background="#0F172A">
-    <!-- Fondo Slate 900 -->
 
     <Window.DataContext>
         <local:MainViewModel/>
     </Window.DataContext>
 
     <Grid>
-        <!-- 1. DEFINICIONES DE FILAS (Deben ir al principio) -->
         <Grid.RowDefinitions>
             <RowDefinition Height="90"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="45"/>
         </Grid.RowDefinitions>
 
-        <!-- 2. RECURSOS DE ESTILO -->
         <Grid.Resources>
-            <!-- Estilo para redondear el botón de Login -->
             <Style x:Key="LoginButtonStyle" TargetType="Button">
                 <Setter Property="Background" Value="#334155"/>
                 <Setter Property="BorderThickness" Value="0"/>
@@ -41,7 +37,6 @@
                 </Setter>
             </Style>
 
-            <!-- Estilo para redondear el botón de Simulación -->
             <Style x:Key="SimulateButtonStyle" TargetType="Button">
                 <Setter Property="Background" Value="#D4AF37"/>
                 <Setter Property="BorderThickness" Value="0"/>
@@ -59,9 +54,6 @@
             </Style>
         </Grid.Resources>
 
-        <!-- 3. CONTENIDO (Elementos hijos) -->
-
-        <!-- ESCUDO DE FONDO (Watermark) -->
         <Grid x:Name="BackgroundShield" Grid.RowSpan="3" Opacity="0.04" IsHitTestVisible="False">
             <Viewbox Stretch="Uniform" Margin="250">
                 <Canvas Width="200" Height="250">
@@ -71,7 +63,6 @@
             </Viewbox>
         </Grid>
 
-        <!-- CABECERA INSTITUCIONAL -->
         <Border Grid.Row="0" Background="#1E293B" BorderBrush="#D4AF37" BorderThickness="0,0,0,3">
             <Grid Margin="30,0">
                 <StackPanel VerticalAlignment="Center">
@@ -95,16 +86,13 @@
             </Grid>
         </Border>
 
-        <!-- BOTÓN DE CERRAR VENTANA -->
         <Button Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Top" 
                 Width="40" Height="40" Background="Transparent" BorderThickness="0"
                 Foreground="White" Click="CloseWindow_Click" Margin="0,5,5,0" Opacity="0.5">
             <TextBlock Text="✕" FontSize="20" FontWeight="Light"/>
         </Button>
 
-        <!-- ÁREA PRINCIPAL DINÁMICA -->
         <Grid Grid.Row="1">
-            <!-- CAPA 1: ESTADO DE ESPERA -->
             <StackPanel x:Name="CapaEspera" VerticalAlignment="Center" HorizontalAlignment="Center">
                 <StackPanel.Style>
                     <Style TargetType="StackPanel">
@@ -123,12 +111,11 @@
                 <TextBlock Text="ESPERANDO HUELLA" FontSize="42" FontWeight="Black" Foreground="White" Margin="0,30,0,0" HorizontalAlignment="Center"/>
                 <TextBlock Text="POR FAVOR, COLOQUE SU DEDO EN EL LECTOR" FontSize="16" Foreground="#64748B" HorizontalAlignment="Center" Margin="0,10,0,0"/>
 
-                <Button Style="{StaticResource SimulateButtonStyle}" Click="Button_Click" Margin="0,40,0,0">
+                <Button Style="{StaticResource SimulateButtonStyle}" Click="Button_Click" Margin="0,40,0,0" Visibility="Collapsed">
                     <TextBlock Text="SIMULAR ESCANEO" Foreground="#00204A" FontWeight="Bold"/>
                 </Button>
             </StackPanel>
 
-            <!-- CAPA 2: RESULTADO DE ACCESO -->
             <Border x:Name="CapaResultado" Background="Transparent">
                 <Border.Style>
                     <Style TargetType="Border">
@@ -145,44 +132,46 @@
                     <Border Background="{Binding StatusColor}" Opacity="0.95"/>
                     <Grid Margin="60">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="400"/>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
-                        <Border Grid.Column="0" CornerRadius="25" Background="#111" BorderBrush="White" BorderThickness="10" VerticalAlignment="Center" Height="550">
+                        <Border Grid.Column="0" CornerRadius="20" BorderBrush="White" BorderThickness="8" VerticalAlignment="Center" Height="500" Width="380" Background="#111" Margin="0,0,60,0">
                             <Border.Effect>
                                 <DropShadowEffect BlurRadius="40" ShadowDepth="0" Opacity="0.5"/>
                             </Border.Effect>
                             <Grid>
-                                <Image Source="{Binding MarinoActual.FotoPath}" Stretch="UniformToFill">
-                                    <Image.Clip>
-                                        <RectangleGeometry Rect="0,0,380,530" RadiusX="15" RadiusY="15"/>
-                                    </Image.Clip>
-                                </Image>
-                                <Border VerticalAlignment="Bottom" Background="#CC000000" Padding="15">
-                                    <TextBlock Text="{Binding MarinoActual.Matricula}" Foreground="#D4AF37" FontSize="24" FontWeight="Black" HorizontalAlignment="Center" FontFamily="Consolas"/>
+                                <Border CornerRadius="12" ClipToBounds="True">
+                                    <Image Source="{Binding MarinoActual.FotoImagen}" Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                </Border>
+                                
+                                <Border VerticalAlignment="Bottom" Background="#CC000000" Padding="15" CornerRadius="0,0,12,12">
+                                    <TextBlock Text="{Binding MarinoActual.Matricula}" Foreground="#D4AF37" FontSize="28" FontWeight="Black" HorizontalAlignment="Center" FontFamily="Consolas"/>
                                 </Border>
                             </Grid>
                         </Border>
 
-                        <StackPanel Grid.Column="1" Margin="60,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="{Binding StatusMensaje}" Foreground="White" FontSize="100" FontWeight="Black" Margin="0,0,0,20"/>
-                            <Border Background="White" Opacity="0.1" Height="2" Margin="0,0,0,40"/>
-                            <TextBlock Text="GRADO" Foreground="White" FontSize="16" FontWeight="Bold" Opacity="0.7"/>
-                            <TextBlock Text="{Binding MarinoActual.Grado}" FontSize="54" FontWeight="Light" Foreground="White" Margin="0,0,0,30"/>
-                            <TextBlock Text="NOMBRE COMPLETO" Foreground="White" FontSize="16" FontWeight="Bold" Opacity="0.7"/>
-                            <TextBlock Text="{Binding MarinoActual.NombreCompleto}" FontSize="42" FontWeight="Black" Foreground="White" TextWrapping="Wrap" Margin="0,0,0,30"/>
-                            <StackPanel>
-                                <TextBlock Text="JEFATURA / ÁREA" Foreground="White" FontSize="16" FontWeight="Bold" Opacity="0.7"/>
-                                <TextBlock Text="{Binding MarinoActual.Jefatura}" FontSize="28" Foreground="White" FontWeight="SemiBold"/>
-                            </StackPanel>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <Viewbox MaxHeight="100" HorizontalAlignment="Left" Margin="0,0,0,20">
+                                <TextBlock Text="{Binding StatusMensaje}" Foreground="White" FontWeight="Black"/>
+                            </Viewbox>
+                            
+                            <Border Background="White" Opacity="0.2" Height="3" Margin="0,0,0,30"/>
+                            
+                            <TextBlock Text="GRADO" Foreground="White" FontSize="18" FontWeight="Bold" Opacity="0.7"/>
+                            <TextBlock Text="{Binding MarinoActual.Grado}" FontSize="50" FontWeight="Light" Foreground="White" Margin="0,0,0,25"/>
+                            
+                            <TextBlock Text="NOMBRE COMPLETO" Foreground="White" FontSize="18" FontWeight="Bold" Opacity="0.7"/>
+                            <TextBlock Text="{Binding MarinoActual.NombreCompleto}" FontSize="46" FontWeight="Black" Foreground="White" TextWrapping="Wrap" Margin="0,0,0,25"/>
+                            
+                            <TextBlock Text="JEFATURA / ÁREA" Foreground="White" FontSize="18" FontWeight="Bold" Opacity="0.7"/>
+                            <TextBlock Text="{Binding MarinoActual.Jefatura}" FontSize="32" Foreground="White" FontWeight="SemiBold"/>
                         </StackPanel>
                     </Grid>
                 </Grid>
             </Border>
         </Grid>
 
-        <!-- PIE DE PÁGINA -->
         <Border Grid.Row="2" Background="#020617" BorderBrush="#1E293B" BorderThickness="0,1,0,0">
             <TextBlock Text="SISTEMA DE USO OFICIAL EXCLUSIVO PARA LA SECRETARÍA DE MARINA - MÉXICO" 
                        Foreground="#475569" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="10" FontWeight="Bold"/>
