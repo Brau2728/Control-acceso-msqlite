@@ -10,9 +10,11 @@ namespace prueba1
         public string Grado { get; set; } = string.Empty;
         public string CuerpoServicio { get; set; } = string.Empty;
         public string Jefatura { get; set; } = string.Empty;
-        public string EstadoAsistencia { get; set; } = "PRESENTE";
-        
-        // Propiedad para cargar la imagen en la interfaz
+
+      
+        public string Estatus { get; set; } = "ACTIVO";
+        public string Novedad { get; set; } = "PRESENTE";
+
         public ImageSource? FotoImagen { get; set; }
 
         public string NombreCompleto => $"{Nombre} {Apellidos}";
