@@ -64,6 +64,25 @@ namespace prueba1
             _limpiezaTimer.Start(); 
         }
 
+        // 3. LA HUELLA COINCIDE, PERO ESTÁ DADO DE BAJA
+        public void AccesoDenegadoBaja(Marino marino)
+        {
+            _limpiezaTimer.Stop();
+            MarinoActual = marino;
+            StatusMensaje = "❌ ACCESO DENEGADO (BAJA)";
+            StatusColor = Brushes.DarkRed;
+            _limpiezaTimer.Start();
+        }
+
+        // 4. LA HUELLA COINCIDE, PERO TIENE UNA NOVEDAD (Vacaciones, Arresto, etc.)
+        public void AccesoConNovedad(Marino marino)
+        {
+            _limpiezaTimer.Stop();
+            MarinoActual = marino;
+            StatusMensaje = $"⚠️ ATENCIÓN: {marino.Novedad}";
+            StatusColor = Brushes.DarkOrange;
+            _limpiezaTimer.Start();
+        }
         // 3. LA HUELLA FUE PUESTA MUY RÁPIDO, CHUECA O EL LECTOR ESTÁ SUCIO
         public void MalaCaptura()
         {

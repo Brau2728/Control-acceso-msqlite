@@ -1,7 +1,8 @@
-﻿using System.Data.SQLite;
+﻿using System;
+using System.Data.SQLite;
 using System.IO;
 
-namespace prueva1
+namespace prueba1 // Asegúrate de que coincida con tu namespace (prueba1 o prueva1)
 {
     public class ConexionDB
     {
@@ -10,17 +11,14 @@ namespace prueva1
 
         public static SQLiteConnection ObtenerConexion()
         {
-            // 1. Si de plano no existe el archivo, lo crea
             if (!File.Exists(dbName))
             {
                 SQLiteConnection.CreateFile(dbName);
             }
 
-            // 2. Abrimos la conexión
             SQLiteConnection conexion = new SQLiteConnection(connectionString);
             conexion.Open();
 
-            // 3. BLINDAJE: Siempre intentará crear las tablas si faltan (por si el archivo estaba vacío)
             string sql = @"
             CREATE TABLE IF NOT EXISTS Usuarios_Sistema (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT, 
@@ -37,10 +35,20 @@ namespace prueva1
                 IdGrado INTEGER, 
                 IdJefatura INTEGER, 
                 FotoPerfil BLOB, 
-                Huella BLOB
+                Huella BLOB,
+                Estatus TEXT DEFAULT 'ACTIVO',
+                Novedad TEXT DEFAULT 'PRESENTE'
             );
             
-            -- Insertamos los usuarios base solo si no existen (evita duplicados)
+            -- ¡NUEVA TABLA PARA EL HISTORIAL DE ACCESOS! --
+            CREATE TABLE IF NOT EXISTS Registro_Accesos (
+                IdRegistro INTEGER PRIMARY KEY AUTOINCREMENT,
+                Matricula TEXT,
+                FechaHora DATETIME,
+                MensajeAcceso TEXT,
+                NovedadMomento TEXT
+            );
+            
             INSERT OR IGNORE INTO Usuarios_Sistema (Username, PasswordHash, Rol) VALUES ('admin', '1234', 'ADMIN');
             INSERT OR IGNORE INTO Usuarios_Sistema (Username, PasswordHash, Rol) VALUES ('guardia', '1234', 'GUARDIA');
             ";
@@ -50,7 +58,10 @@ namespace prueva1
                 cmd.ExecuteNonQuery();
             }
 
-            // Devolvemos la conexión ya lista y con las tablas garantizadas
+            // Parches para BD existentes
+            try { using (SQLiteCommand cmd = new SQLiteCommand("ALTER TABLE Personal_Naval ADD COLUMN Estatus TEXT DEFAULT 'ACTIVO'", conexion)) { cmd.ExecuteNonQuery(); } } catch { }
+            try { using (SQLiteCommand cmd = new SQLiteCommand("ALTER TABLE Personal_Naval ADD COLUMN Novedad TEXT DEFAULT 'PRESENTE'", conexion)) { cmd.ExecuteNonQuery(); } } catch { }
+
             return conexion;
         }
     }

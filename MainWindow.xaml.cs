@@ -3,11 +3,10 @@ using System.Data.SQLite;
 using System.IO;
 using System.Windows;
 using System.Windows.Media.Imaging;
-using prueva1;
 using DPFP; // Lector
 using DPFP.Verification; // Verificador
 
-namespace prueba1
+namespace prueba1 // Asegúrate de que diga prueba1 o prueva1 según tu proyecto
 {
     public partial class MainWindow : Window, DPFP.Capture.EventHandler
     {
@@ -21,6 +20,7 @@ namespace prueba1
             this.Closed += MainWindow_Closed;
         }
 
+        #region Control del Lector
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             InitHuella();
@@ -50,8 +50,9 @@ namespace prueba1
 
         private void IniciarCaptura() { if (Capturer != null) { try { Capturer.StartCapture(); } catch { } } }
         private void DetenerCaptura() { if (Capturer != null) { try { Capturer.StopCapture(); } catch { } } }
+        #endregion
 
-        // --- EVENTO CUANDO ALGUIEN PONE EL DEDO ---
+        #region Eventos del Lector
         public void OnComplete(object Capture, string ReaderSerialNumber, Sample Sample)
         {
             ProcesarHuella(Sample);
@@ -62,32 +63,26 @@ namespace prueba1
         public void OnReaderConnect(object Capture, string ReaderSerialNumber) { }
         public void OnReaderDisconnect(object Capture, string ReaderSerialNumber) { }
         public void OnSampleQuality(object Capture, string ReaderSerialNumber, DPFP.Capture.CaptureFeedback CaptureFeedback) { }
+        #endregion
 
-        // --- PROCESAR Y VERIFICAR ---
-       private void ProcesarHuella(Sample sample)
+        #region Lógica de Verificación e Historial
+        private void ProcesarHuella(Sample sample)
         {
-            // Extraer características de la huella capturada para VERIFICACIÓN
             DPFP.Processing.FeatureExtraction extractor = new DPFP.Processing.FeatureExtraction();
             DPFP.Capture.CaptureFeedback feedback = DPFP.Capture.CaptureFeedback.None;
             DPFP.FeatureSet features = new DPFP.FeatureSet();
-            
-            // Usamos DataPurpose.Verification para comparar
+
             extractor.CreateFeatureSet(sample, DPFP.Processing.DataPurpose.Verification, ref feedback, ref features);
 
             if (feedback == DPFP.Capture.CaptureFeedback.Good)
             {
-                // Si la lectura física es buena, busca en SQLite
                 VerificarEnBaseDeDatos(features);
             }
             else
             {
-                // Si la lectura física falló (movió el dedo, está sucio, etc.)
                 this.Dispatcher.Invoke(() =>
                 {
-                    if (this.DataContext is MainViewModel vm)
-                    {
-                        vm.MalaCaptura();
-                    }
+                    if (this.DataContext is MainViewModel vm) vm.MalaCaptura();
                 });
             }
         }
@@ -101,8 +96,7 @@ namespace prueba1
             {
                 using (SQLiteConnection conexion = ConexionDB.ObtenerConexion())
                 {
-                    // Traemos todos los registros para compararlos uno por uno
-                    string query = "SELECT Matricula, Nombres, Apellidos, IdGrado, IdJefatura, FotoPerfil, Huella FROM Personal_Naval";
+                    string query = "SELECT Matricula, Nombres, Apellidos, IdGrado, IdJefatura, FotoPerfil, Huella, Estatus, Novedad FROM Personal_Naval";
                     using (SQLiteCommand cmd = new SQLiteCommand(query, conexion))
                     using (SQLiteDataReader reader = cmd.ExecuteReader())
                     {
@@ -111,14 +105,13 @@ namespace prueba1
                             if (reader["Huella"] != DBNull.Value)
                             {
                                 byte[] huellaBD = (byte[])reader["Huella"];
-                                
+
                                 DPFP.Template templateGuardado = new DPFP.Template();
                                 using (MemoryStream stream = new MemoryStream(huellaBD))
                                 {
                                     templateGuardado = new DPFP.Template(stream);
                                 }
 
-                                // REALIZAR LA COMPARACIÓN
                                 Verification.Result result = new Verification.Result();
                                 Verificator.Verify(featuresCapturadas, templateGuardado, ref result);
 
@@ -131,7 +124,9 @@ namespace prueba1
                                         Nombre = reader["Nombres"].ToString(),
                                         Apellidos = reader["Apellidos"].ToString(),
                                         Grado = ObtenerNombreGrado(Convert.ToInt32(reader["IdGrado"])),
-                                        Jefatura = ObtenerNombreJefatura(Convert.ToInt32(reader["IdJefatura"]))
+                                        Jefatura = ObtenerNombreJefatura(Convert.ToInt32(reader["IdJefatura"])),
+                                        Estatus = reader["Estatus"].ToString(),
+                                        Novedad = reader["Novedad"].ToString()
                                     };
 
                                     if (reader["FotoPerfil"] != DBNull.Value)
@@ -139,23 +134,47 @@ namespace prueba1
                                         byte[] fotoBytes = (byte[])reader["FotoPerfil"];
                                         marinoEncontrado.FotoImagen = ConvertirBytesAImagen(fotoBytes);
                                     }
+                                    else
+                                    {
+                                        marinoEncontrado.FotoImagen = new BitmapImage(new Uri("https://cdn-icons-png.flaticon.com/512/3135/3135715.png"));
+                                    }
 
-                                    break; // Huella encontrada, salir del ciclo
+                                    break;
                                 }
                             }
                         }
                     }
                 }
 
-                // Mandar el resultado a la pantalla
+                // --- LÓGICA DE DECISIÓN DE COLORES Y REGISTRO DE HISTORIAL ---
                 this.Dispatcher.Invoke(() =>
                 {
                     if (this.DataContext is MainViewModel vm)
                     {
                         if (accesoConcedido && marinoEncontrado != null)
-                            vm.AccesoAutorizado(marinoEncontrado);
+                        {
+                            if (marinoEncontrado.Estatus == "BAJA")
+                            {
+                                vm.AccesoDenegadoBaja(marinoEncontrado);
+                                GuardarHistorialAcceso(marinoEncontrado.Matricula, "DENEGADO (BAJA)", marinoEncontrado.Novedad);
+                            }
+                            else if (marinoEncontrado.Novedad != "PRESENTE")
+                            {
+                                vm.AccesoConNovedad(marinoEncontrado);
+                                GuardarHistorialAcceso(marinoEncontrado.Matricula, "ACCESO CON NOVEDAD", marinoEncontrado.Novedad);
+                            }
+                            else
+                            {
+                                vm.AccesoAutorizado(marinoEncontrado);
+                                GuardarHistorialAcceso(marinoEncontrado.Matricula, "ACCESO NORMAL", "PRESENTE");
+                            }
+                        }
                         else
+                        {
                             vm.AccesoDenegado();
+                            // Registramos intentos de huellas no reconocidas
+                            GuardarHistorialAcceso("DESCONOCIDA", "INTENTO RECHAZADO", "-");
+                        }
                     }
                 });
             }
@@ -165,7 +184,33 @@ namespace prueba1
             }
         }
 
-        // --- FUNCIONES DE AYUDA ---
+        // --- NUEVA FUNCIÓN PARA GUARDAR EL HISTORIAL ---
+        private void GuardarHistorialAcceso(string matricula, string mensajeAcceso, string novedad)
+        {
+            try
+            {
+                using (SQLiteConnection conexion = ConexionDB.ObtenerConexion())
+                {
+                    string query = "INSERT INTO Registro_Accesos (Matricula, FechaHora, MensajeAcceso, NovedadMomento) VALUES (@mat, @fecha, @mensaje, @novedad)";
+                    using (SQLiteCommand cmd = new SQLiteCommand(query, conexion))
+                    {
+                        cmd.Parameters.AddWithValue("@mat", matricula);
+                        cmd.Parameters.AddWithValue("@fecha", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+                        cmd.Parameters.AddWithValue("@mensaje", mensajeAcceso);
+                        cmd.Parameters.AddWithValue("@novedad", novedad);
+
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error al guardar historial: " + ex.Message);
+            }
+        }
+        #endregion
+
+        #region Funciones Auxiliares e Interfaz
         private string ObtenerNombreGrado(int id)
         {
             string[] grados = { "Otro", "Marinero", "Cabo", "Tercer Maestre", "Segundo Maestre", "Primer Maestre", "TTE. Corbeta", "TTE. Fragata", "TTE. Navío", "CAP. Corbeta", "CAP. Fragata", "CAP. Navío", "Contralmirante", "Vicealmirante", "Almirante" };
@@ -198,20 +243,20 @@ namespace prueba1
             return image;
         }
 
-        private void Button_Click(object sender, RoutedEventArgs e) { } // Botón manual vacío
+        private void Button_Click(object sender, RoutedEventArgs e) { }
 
-    private void OpenLogin_Click(object sender, RoutedEventArgs e)
+        private void OpenLogin_Click(object sender, RoutedEventArgs e)
         {
-            // 1. PAUSAMOS EL LECTOR PARA "PRESTARLO" A OTRAS VENTANAS
+            // Pausamos el sensor para prestárselo a otras ventanas
             DetenerCaptura();
 
             LoginWindow login = new LoginWindow();
-            if (login.ShowDialog() == true) // ShowDialog detiene el código aquí hasta que se cierre la ventana
+            if (login.ShowDialog() == true)
             {
                 if (login.RolUsuario == "ADMIN")
                 {
                     PanelAdminWindow panelAdmin = new PanelAdminWindow();
-                    panelAdmin.ShowDialog(); // Lo mismo, espera a que el admin cierre su panel
+                    panelAdmin.ShowDialog();
                 }
                 else
                 {
@@ -219,11 +264,12 @@ namespace prueba1
                 }
             }
 
-            // 2. CUANDO EL ADMIN O GUARDIA CIERRAN SUS PANELES Y REGRESAN AQUÍ, REANUDAMOS EL LECTOR
+            // Al cerrar las ventanas, reactivamos el sensor
             IniciarCaptura();
         }
 
         private void Test_Click(object sender, RoutedEventArgs e) { }
         private void CloseWindow_Click(object sender, RoutedEventArgs e) { Application.Current.Shutdown(); }
+        #endregion
     }
 }

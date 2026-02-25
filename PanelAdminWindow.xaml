@@ -1,21 +1,10 @@
 ﻿<Window x:Class="prueba1.PanelAdminWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Panel de Administración - SICB-GAN" Height="600" Width="900"
-        WindowStartupLocation="CenterScreen" Background="#F0F2F5">
-
-    <Window.Resources>
-        <Style x:Key="BotonMenu" TargetType="Button">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="HorizontalContentAlignment" Value="Left"/>
-            <Setter Property="Padding" Value="20,0,0,0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-        </Style>
-    </Window.Resources>
+        Title="Panel de Administración - Control de Acceso" 
+        Height="720" Width="1280" 
+        WindowStartupLocation="CenterScreen"
+        WindowState="Maximized">
 
     <Grid>
         <Grid.ColumnDefinitions>
@@ -23,56 +12,59 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0" Background="#00204A">
-            <StackPanel Margin="0,30,0,0">
-                <TextBlock Text="👤" FontSize="50" Foreground="#D4AF37" HorizontalAlignment="Center"/>
-                <TextBlock Text="ADMINISTRADOR" Foreground="White" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,10,0,30"/>
+        <Border Grid.Column="0" Background="#1E293B">
+            <StackPanel Margin="10,30,10,10">
+                <TextBlock Text="⚓ PANEL ADMIN" Foreground="White" FontSize="22" FontWeight="Black" HorizontalAlignment="Center" Margin="0,0,0,40"/>
 
-                <Button Content="📝 NUEVO REGISTRO" Height="50" Click="BtnNuevoRegistro_Click" Style="{StaticResource BotonMenu}"/>
-                <Button Content="📂 DIRECTORIO PERSONAL" Height="50" Click="BtnDirectorio_Click" Style="{StaticResource BotonMenu}"/>
-                <Button Content="📊 VER REPORTES" Height="50" Style="{StaticResource BotonMenu}"/>
+                <Button Content="➕ Nuevo Registro" Background="#10B981" Foreground="White" FontWeight="Bold" FontSize="14" Padding="15" Margin="0,5" BorderThickness="0" Cursor="Hand" Click="BtnNuevoRegistro_Click"/>
+                <Button Content="📁 Directorio" Background="#3B82F6" Foreground="White" FontWeight="Bold" FontSize="14" Padding="15" Margin="0,5" BorderThickness="0" Cursor="Hand" Click="BtnDirectorio_Click"/>
+                <Button Content="📊 Reportes" Background="#F59E0B" Foreground="White" FontWeight="Bold" FontSize="14" Padding="15" Margin="0,5" BorderThickness="0" Cursor="Hand" Click="BtnReportes_Click"/>
 
-                <Border Height="150"/> 
-                
-                <Button Content="🚪 CERRAR SESIÓN" Click="BtnCerrarSesion_Click" Height="50" Background="#D4AF37" Foreground="#00204A" FontWeight="Bold" Margin="20,0" Cursor="Hand"/>
+                <Button Content="🚪 Cerrar Sesión" Background="#EF4444" Foreground="White" FontWeight="Bold" FontSize="14" Padding="15" Margin="0,50,0,0" BorderThickness="0" Cursor="Hand" Click="BtnCerrarSesion_Click"/>
             </StackPanel>
         </Border>
 
-        <Grid Grid.Column="1" Background="White">
-            <StackPanel x:Name="PanelBienvenida" VerticalAlignment="Center" HorizontalAlignment="Center">
-                <TextBlock Text="SISTEMA DE MANDO" Foreground="#00204A" FontSize="36" FontWeight="Black" HorizontalAlignment="Center"/>
-                <TextBlock Text="Seleccione una opción del menú" Foreground="Gray" FontSize="18" HorizontalAlignment="Center"/>
-            </StackPanel>
+        <Grid Grid.Column="1" Background="#F1F5F9">
 
-            <Grid x:Name="PanelDirectorio" Visibility="Collapsed" Margin="20">
+            <Grid x:Name="PanelBienvenida" Visibility="Visible">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <TextBlock Text="SISTEMA DE CONTROL BIOMÉTRICO" FontSize="32" FontWeight="Black" Foreground="#94A3B8" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Seleccione una opción del menú lateral para comenzar" FontSize="16" Foreground="#CBD5E1" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                </StackPanel>
+            </Grid>
+
+            <Grid x:Name="PanelDirectorio" Visibility="Collapsed" Margin="30">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
-                
-                <TextBlock Text="PERSONAL NAVAL REGISTRADO" FontSize="22" FontWeight="Bold" Foreground="#00204A" Margin="0,0,0,10"/>
-                
-                <DataGrid x:Name="dgPersonal" Grid.Row="1" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" HeadersVisibility="Column">
+
+                <TextBlock Grid.Row="0" Text="Directorio del Personal Naval" FontSize="26" FontWeight="Black" Foreground="#0F172A" Margin="0,0,0,20"/>
+
+                <DataGrid x:Name="dgPersonal" Grid.Row="1" AutoGenerateColumns="False" CanUserAddRows="False" 
+                          Background="White" RowHeight="45" AlternatingRowBackground="#F8FAFC"
+                          HeadersVisibility="Column" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" BorderThickness="1" BorderBrush="#E2E8F0">
+                    <DataGrid.Resources>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Background" Value="#F1F5F9"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                            <Setter Property="Padding" Value="10,10"/>
+                        </Style>
+                    </DataGrid.Resources>
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Matrícula" Binding="{Binding Matricula}" Width="*"/>
-                        <DataGridTextColumn Header="Grado" Binding="{Binding Grado}" Width="*"/>
-                        <DataGridTextColumn Header="Nombre" Binding="{Binding Nombre}" Width="2*"/>
-                        <DataGridTextColumn Header="Apellidos" Binding="{Binding Apellidos}" Width="2*"/>
-                        <DataGridTextColumn Header="Jefatura" Binding="{Binding Jefatura}" Width="*"/>
-                        <DataGridTextColumn Header="Situación" Binding="{Binding Novedad}" Width="*"/>
-                        <DataGridTemplateColumn Header="Acciones" Width="Auto">
+                        <DataGridTextColumn Header="Matrícula" Binding="{Binding Matricula}" Width="110" IsReadOnly="True"/>
+                        <DataGridTextColumn Header="Grado" Binding="{Binding Grado}" Width="80" IsReadOnly="True"/>
+                        <DataGridTextColumn Header="Nombres" Binding="{Binding Nombre}" Width="150" IsReadOnly="True"/>
+                        <DataGridTextColumn Header="Apellidos" Binding="{Binding Apellidos}" Width="150" IsReadOnly="True"/>
+                        <DataGridTextColumn Header="Estatus" Binding="{Binding Estatus}" Width="100" IsReadOnly="True"/>
+                        <DataGridTextColumn Header="Novedad" Binding="{Binding Novedad}" Width="130" IsReadOnly="True"/>
+                        <DataGridTemplateColumn Header="Acciones" Width="*">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                        <Button Content="✏️ Editar" 
-                                                Background="#D4AF37" Foreground="#00204A" 
-                                                FontWeight="Bold" BorderThickness="0" Cursor="Hand" Margin="5,2" Padding="10,5"
-                                                Click="BtnEditarRegistro_Click" CommandParameter="{Binding Matricula}"/>
-                                        
-                                        <Button Content="🗑️ Eliminar" 
-                                                Background="#CC0000" Foreground="White" 
-                                                FontWeight="Bold" BorderThickness="0" Cursor="Hand" Margin="5,2" Padding="10,5"
-                                                Click="BtnEliminarRegistro_Click" CommandParameter="{Binding Matricula}"/>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                        <Button Content="📌 Novedad" Background="#0284C7" Foreground="White" FontWeight="Bold" BorderThickness="0" Cursor="Hand" Margin="5,2" Padding="10,5" Click="BtnNovedad_Click" CommandParameter="{Binding Matricula}"/>
+                                        <Button Content="✏️ Editar" Background="#D4AF37" Foreground="#00204A" FontWeight="Bold" BorderThickness="0" Cursor="Hand" Margin="5,2" Padding="10,5" Click="BtnEditarRegistro_Click" CommandParameter="{Binding Matricula}"/>
+                                        <Button Content="🗑️ Eliminar" Background="#CC0000" Foreground="White" FontWeight="Bold" BorderThickness="0" Cursor="Hand" Margin="5,2" Padding="10,5" Click="BtnEliminarRegistro_Click" CommandParameter="{Binding Matricula}"/>
                                     </StackPanel>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
@@ -80,6 +72,86 @@
                     </DataGrid.Columns>
                 </DataGrid>
             </Grid>
+
+            <Grid x:Name="PanelReportes" Visibility="Collapsed" Margin="30">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="Monitoreo y Reportes de Acceso" FontSize="26" FontWeight="Black" Foreground="#0F172A" Margin="0,0,0,15"/>
+
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,15">
+                    <TextBlock Text="Buscar Matrícula:" VerticalAlignment="Center" FontWeight="Bold" Margin="0,0,5,0" Foreground="#475569"/>
+                    <TextBox x:Name="txtFiltroMatricula" Width="120" Margin="0,0,20,0" Padding="5"/>
+
+                    <TextBlock Text="Fecha Inicio:" VerticalAlignment="Center" FontWeight="Bold" Margin="0,0,5,0" Foreground="#475569"/>
+                    <DatePicker x:Name="dpFechaInicio" Width="120" Margin="0,0,20,0"/>
+
+                    <TextBlock Text="Fecha Fin:" VerticalAlignment="Center" FontWeight="Bold" Margin="0,0,5,0" Foreground="#475569"/>
+                    <DatePicker x:Name="dpFechaFin" Width="120" Margin="0,0,20,0"/>
+
+                    <Button Content="🔍 Filtrar" Background="#3B82F6" Foreground="White" FontWeight="Bold" Padding="15,5" BorderThickness="0" Cursor="Hand" Click="BtnFiltrarReporte_Click"/>
+                </StackPanel>
+
+                <DataGrid x:Name="dgReportes" Grid.Row="2" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
+                          Background="White" RowHeight="40" AlternatingRowBackground="#F8FAFC"
+                          HeadersVisibility="Column" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" BorderThickness="1" BorderBrush="#E2E8F0">
+                    <DataGrid.Resources>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Background" Value="#F1F5F9"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                            <Setter Property="Padding" Value="10,10"/>
+                        </Style>
+                    </DataGrid.Resources>
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Fecha y Hora" Binding="{Binding FechaHora}" Width="150"/>
+                        <DataGridTextColumn Header="Matrícula" Binding="{Binding Matricula}" Width="100"/>
+                        <DataGridTextColumn Header="Nombre Completo" Binding="{Binding NombreCompleto}" Width="250"/>
+                        <DataGridTextColumn Header="Mensaje Acceso" Binding="{Binding MensajeAcceso}" Width="180"/>
+                        <DataGridTextColumn Header="Novedad" Binding="{Binding NovedadMomento}" Width="120"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
+                    <Button Content="📗 Exportar a Excel (CSV)" Background="#10B981" Foreground="White" FontWeight="Bold" Padding="20,12" BorderThickness="0" Cursor="Hand" Click="BtnExportarExcel_Click"/>
+                </StackPanel>
+            </Grid>
+
+        </Grid>
+
+        <Grid x:Name="PanelNovedades" Grid.ColumnSpan="2" Visibility="Collapsed" Background="#CC000000" Panel.ZIndex="100">
+            <Border Background="White" Width="400" Height="380" CornerRadius="15" VerticalAlignment="Center" HorizontalAlignment="Center" Padding="30">
+                <StackPanel>
+                    <TextBlock Text="📋 PARTE DE NOVEDADES" FontSize="22" FontWeight="Black" Foreground="#0F172A" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                    <TextBlock Text="Matrícula Seleccionada:" Foreground="#64748B" FontSize="12" FontWeight="Bold"/>
+                    <TextBlock x:Name="txtMatriculaNovedad" Text="-" FontSize="20" FontWeight="Black" Foreground="#1E293B" Margin="0,0,0,15"/>
+                    <TextBlock Text="Estado del Elemento (Alta/Baja):" Foreground="#64748B" FontSize="12" FontWeight="Bold"/>
+                    <ComboBox x:Name="cmbEstatus" Margin="0,5,0,15" FontSize="14" Padding="8">
+                        <ComboBoxItem Content="ACTIVO" Tag="ACTIVO"/>
+                        <ComboBoxItem Content="BAJA" Tag="BAJA"/>
+                    </ComboBox>
+                    <TextBlock Text="Situación Actual (Novedad):" Foreground="#64748B" FontSize="12" FontWeight="Bold"/>
+                    <ComboBox x:Name="cmbNovedad" Margin="0,5,0,30" FontSize="14" Padding="8">
+                        <ComboBoxItem Content="PRESENTE" Tag="PRESENTE"/>
+                        <ComboBoxItem Content="FALTISTA" Tag="FALTISTA"/>
+                        <ComboBoxItem Content="VACACIONES" Tag="VACACIONES"/>
+                        <ComboBoxItem Content="PERMISO" Tag="PERMISO"/>
+                        <ComboBoxItem Content="COMISION" Tag="COMISION"/>
+                        <ComboBoxItem Content="HOSPITALIZADO" Tag="HOSPITALIZADO"/>
+                        <ComboBoxItem Content="REBAJADO" Tag="REBAJADO"/>
+                        <ComboBoxItem Content="FRANQUICIA" Tag="FRANQUICIA"/>
+                        <ComboBoxItem Content="GUARDIA" Tag="GUARDIA"/>
+                        <ComboBoxItem Content="ARRESTO" Tag="ARRESTO"/>
+                    </ComboBox>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <Button Content="GUARDAR" Background="#10B981" Foreground="White" FontWeight="Bold" FontSize="14" Padding="20,10" Margin="0,0,15,0" Click="BtnGuardarNovedad_Click" BorderThickness="0" Cursor="Hand"/>
+                        <Button Content="CANCELAR" Background="#EF4444" Foreground="White" FontWeight="Bold" FontSize="14" Padding="20,10" Click="BtnCancelarNovedad_Click" BorderThickness="0" Cursor="Hand"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
         </Grid>
     </Grid>
 </Window>
