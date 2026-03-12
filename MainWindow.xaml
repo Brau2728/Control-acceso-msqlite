@@ -142,7 +142,7 @@
                             </Border.Effect>
                             <Grid>
                                 <Border CornerRadius="12" ClipToBounds="True">
-                                    <Image Source="{Binding MarinoActual.FotoImagen}" Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                    <Image Source="{Binding MarinoActual.FotoImagen}" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
                                 </Border>
                                 
                                 <Border VerticalAlignment="Bottom" Background="#CC000000" Padding="15" CornerRadius="0,0,12,12">

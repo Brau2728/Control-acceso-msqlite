@@ -48,10 +48,23 @@ namespace prueba1 // Asegúrate de que coincida con tu namespace (prueba1 o prue
                 MensajeAcceso TEXT,
                 NovedadMomento TEXT
             );
+
+            -- NUEVA TABLA PARA EL ARCHIVO HISTÓRICO DE REPORTES --
+            CREATE TABLE IF NOT EXISTS Historial_Reportes (
+                IdReporte INTEGER PRIMARY KEY AUTOINCREMENT,
+                FechaGeneracion TEXT,
+                Turno TEXT,
+                GeneradoPor TEXT,
+                RutaArchivo TEXT
+            );
             
             INSERT OR IGNORE INTO Usuarios_Sistema (Username, PasswordHash, Rol) VALUES ('admin', '1234', 'ADMIN');
             INSERT OR IGNORE INTO Usuarios_Sistema (Username, PasswordHash, Rol) VALUES ('guardia', '1234', 'GUARDIA');
             ";
+         
+
+           
+
 
             using (SQLiteCommand cmd = new SQLiteCommand(sql, conexion))
             {

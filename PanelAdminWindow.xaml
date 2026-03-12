@@ -18,7 +18,7 @@
 
                 <Button Content="➕ Nuevo Registro" Background="#10B981" Foreground="White" FontWeight="Bold" FontSize="14" Padding="15" Margin="0,5" BorderThickness="0" Cursor="Hand" Click="BtnNuevoRegistro_Click"/>
                 <Button Content="📁 Directorio" Background="#3B82F6" Foreground="White" FontWeight="Bold" FontSize="14" Padding="15" Margin="0,5" BorderThickness="0" Cursor="Hand" Click="BtnDirectorio_Click"/>
-                <Button Content="📊 Reportes" Background="#F59E0B" Foreground="White" FontWeight="Bold" FontSize="14" Padding="15" Margin="0,5" BorderThickness="0" Cursor="Hand" Click="BtnReportes_Click"/>
+                <Button Content="📊 Reportes y Cortes" Background="#F59E0B" Foreground="White" FontWeight="Bold" FontSize="14" Padding="15" Margin="0,5" BorderThickness="0" Cursor="Hand" Click="BtnReportes_Click"/>
 
                 <Button Content="🚪 Cerrar Sesión" Background="#EF4444" Foreground="White" FontWeight="Bold" FontSize="14" Padding="15" Margin="0,50,0,0" BorderThickness="0" Cursor="Hand" Click="BtnCerrarSesion_Click"/>
             </StackPanel>
@@ -28,7 +28,7 @@
 
             <Grid x:Name="PanelBienvenida" Visibility="Visible">
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                    <TextBlock Text="SISTEMA DE CONTROL BIOMÉTRICO" FontSize="32" FontWeight="Black" Foreground="#94A3B8" HorizontalAlignment="Center"/>
+                    <TextBlock Text="SISTEMA INTEGRAL DE CONTROL BIOMÉTRICO" FontSize="32" FontWeight="Black" Foreground="#94A3B8" HorizontalAlignment="Center"/>
                     <TextBlock Text="Seleccione una opción del menú lateral para comenzar" FontSize="16" Foreground="#CBD5E1" HorizontalAlignment="Center" Margin="0,10,0,0"/>
                 </StackPanel>
             </Grid>
@@ -38,9 +38,7 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
-
                 <TextBlock Grid.Row="0" Text="Directorio del Personal Naval" FontSize="26" FontWeight="Black" Foreground="#0F172A" Margin="0,0,0,20"/>
-
                 <DataGrid x:Name="dgPersonal" Grid.Row="1" AutoGenerateColumns="False" CanUserAddRows="False" 
                           Background="White" RowHeight="45" AlternatingRowBackground="#F8FAFC"
                           HeadersVisibility="Column" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" BorderThickness="1" BorderBrush="#E2E8F0">
@@ -73,51 +71,130 @@
                 </DataGrid>
             </Grid>
 
-            <Grid x:Name="PanelReportes" Visibility="Collapsed" Margin="30">
+            <Grid x:Name="PanelReportes" Visibility="Collapsed" Margin="20">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0" Text="Monitoreo y Reportes de Acceso" FontSize="26" FontWeight="Black" Foreground="#0F172A" Margin="0,0,0,15"/>
+                <TextBlock Grid.Row="0" Text="Módulo de Monitoreo y Cortes de Turno" FontSize="26" FontWeight="Black" Foreground="#0F172A" Margin="10,0,0,15"/>
 
-                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,15">
-                    <TextBlock Text="Buscar Matrícula:" VerticalAlignment="Center" FontWeight="Bold" Margin="0,0,5,0" Foreground="#475569"/>
-                    <TextBox x:Name="txtFiltroMatricula" Width="120" Margin="0,0,20,0" Padding="5"/>
-
-                    <TextBlock Text="Fecha Inicio:" VerticalAlignment="Center" FontWeight="Bold" Margin="0,0,5,0" Foreground="#475569"/>
-                    <DatePicker x:Name="dpFechaInicio" Width="120" Margin="0,0,20,0"/>
-
-                    <TextBlock Text="Fecha Fin:" VerticalAlignment="Center" FontWeight="Bold" Margin="0,0,5,0" Foreground="#475569"/>
-                    <DatePicker x:Name="dpFechaFin" Width="120" Margin="0,0,20,0"/>
-
-                    <Button Content="🔍 Filtrar" Background="#3B82F6" Foreground="White" FontWeight="Bold" Padding="15,5" BorderThickness="0" Cursor="Hand" Click="BtnFiltrarReporte_Click"/>
-                </StackPanel>
-
-                <DataGrid x:Name="dgReportes" Grid.Row="2" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
-                          Background="White" RowHeight="40" AlternatingRowBackground="#F8FAFC"
-                          HeadersVisibility="Column" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" BorderThickness="1" BorderBrush="#E2E8F0">
-                    <DataGrid.Resources>
-                        <Style TargetType="DataGridColumnHeader">
-                            <Setter Property="Background" Value="#F1F5F9"/>
+                <TabControl Grid.Row="1" Background="Transparent" BorderThickness="0">
+                    <TabControl.Resources>
+                        <Style TargetType="TabItem">
+                            <Setter Property="FontSize" Value="16"/>
                             <Setter Property="FontWeight" Value="Bold"/>
-                            <Setter Property="Padding" Value="10,10"/>
+                            <Setter Property="Padding" Value="15,10"/>
+                            <Setter Property="Margin" Value="0,0,5,0"/>
                         </Style>
-                    </DataGrid.Resources>
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="Fecha y Hora" Binding="{Binding FechaHora}" Width="150"/>
-                        <DataGridTextColumn Header="Matrícula" Binding="{Binding Matricula}" Width="100"/>
-                        <DataGridTextColumn Header="Nombre Completo" Binding="{Binding NombreCompleto}" Width="250"/>
-                        <DataGridTextColumn Header="Mensaje Acceso" Binding="{Binding MensajeAcceso}" Width="180"/>
-                        <DataGridTextColumn Header="Novedad" Binding="{Binding NovedadMomento}" Width="120"/>
-                    </DataGrid.Columns>
-                </DataGrid>
+                    </TabControl.Resources>
 
-                <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
-                    <Button Content="📗 Exportar a Excel (CSV)" Background="#10B981" Foreground="White" FontWeight="Bold" Padding="20,12" BorderThickness="0" Cursor="Hand" Click="BtnExportarExcel_Click"/>
-                </StackPanel>
+                    <TabItem Header="⏱️ Bitácora en Vivo (Puerta)">
+                        <Grid Background="White" Margin="0,10,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="15" Background="#F8FAFC">
+                                <TextBlock Text="Matrícula:" VerticalAlignment="Center" FontWeight="Bold" Margin="0,0,5,0"/>
+                                <TextBox x:Name="txtFiltroMatricula" Width="90" Margin="0,0,15,0" Padding="5"/>
+
+                                <TextBlock Text="Fecha/Hora Inicio:" VerticalAlignment="Center" FontWeight="Bold" Margin="0,0,5,0"/>
+                                <DatePicker x:Name="dpFechaInicio" Width="110" Margin="0,0,5,0"/>
+                                <TextBox x:Name="txtHoraInicio" Width="50" Text="00:00" ToolTip="Formato 24h (Ej. 07:00)" Padding="5" Margin="0,0,15,0"/>
+
+                                <TextBlock Text="Fecha/Hora Fin:" VerticalAlignment="Center" FontWeight="Bold" Margin="0,0,5,0"/>
+                                <DatePicker x:Name="dpFechaFin" Width="110" Margin="0,0,5,0"/>
+                                <TextBox x:Name="txtHoraFin" Width="50" Text="23:59" ToolTip="Formato 24h (Ej. 17:00)" Padding="5" Margin="0,0,20,0"/>
+
+                                <CheckBox x:Name="chkOcultarFallos" Content="Ocultar Intentos Fallidos" VerticalAlignment="Center" FontWeight="Bold" Foreground="#64748B" Margin="0,0,20,0"/>
+
+                                <Button Content="🔍 Filtrar" Background="#3B82F6" Foreground="White" FontWeight="Bold" Padding="15,5" BorderThickness="0" Cursor="Hand" Click="BtnFiltrarBitacora_Click"/>
+                            </StackPanel>
+
+                            <DataGrid x:Name="dgBitacora" Grid.Row="1" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
+                                      HeadersVisibility="Column" GridLinesVisibility="Horizontal" Margin="15,0,15,15">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Fecha y Hora" Binding="{Binding FechaHora}" Width="150"/>
+                                    <DataGridTextColumn Header="Matrícula" Binding="{Binding Matricula}" Width="100"/>
+                                    <DataGridTextColumn Header="Nombre Completo" Binding="{Binding NombreCompleto}" Width="250"/>
+                                    <DataGridTextColumn Header="Mensaje Lector" Binding="{Binding MensajeAcceso}" Width="180"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Grid>
+                    </TabItem>
+
+                    <TabItem Header="📋 Generar Corte de Turno">
+                        <Grid Background="White" Margin="0,10,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="15" Background="#F0FDF4">
+                                <TextBlock Text="Turno del:" VerticalAlignment="Center" FontWeight="Bold" Margin="0,0,5,0"/>
+                                <DatePicker x:Name="dpCorteFecha" Width="110" Margin="0,0,15,0"/>
+
+                                <TextBlock Text="De:" VerticalAlignment="Center" FontWeight="Bold" Margin="0,0,5,0"/>
+                                <TextBox x:Name="txtCorteHoraInicio" Width="50" Text="07:00" Padding="5" Margin="0,0,15,0"/>
+
+                                <TextBlock Text="A:" VerticalAlignment="Center" FontWeight="Bold" Margin="0,0,5,0"/>
+                                <TextBox x:Name="txtCorteHoraFin" Width="50" Text="17:00" Padding="5" Margin="0,0,20,0"/>
+
+                                <Button Content="⚡ Calcular Asistencia" Background="#10B981" Foreground="White" FontWeight="Bold" Padding="15,5" BorderThickness="0" Cursor="Hand" Click="BtnGenerarVistaPrevia_Click"/>
+                            </StackPanel>
+
+                            <DataGrid x:Name="dgCorteAsistencia" Grid.Row="1" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
+                                      HeadersVisibility="Column" GridLinesVisibility="Horizontal" Margin="15,0,15,15">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Matrícula" Binding="{Binding Matricula}" Width="100"/>
+                                    <DataGridTextColumn Header="Grado" Binding="{Binding Grado}" Width="90"/>
+                                    <DataGridTextColumn Header="Nombre" Binding="{Binding NombreCompleto}" Width="250"/>
+                                    <DataGridTextColumn Header="Jefatura" Binding="{Binding Jefatura}" Width="120"/>
+                                    <DataGridTextColumn Header="Situación Final" Binding="{Binding Situacion}" Width="150" FontWeight="Bold"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+
+                            <Grid Grid.Row="2" Margin="15,0,15,15">
+                                <TextBlock x:Name="txtResumenCorte" Text="Esperando cálculo..." FontWeight="Bold" FontSize="16" Foreground="#475569" VerticalAlignment="Center"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Button Content="📄 Guardar y Exportar PDF" Background="#EF4444" Foreground="White" FontWeight="Bold" Padding="15,10" Margin="0,0,10,0" BorderThickness="0" Cursor="Hand" Click="BtnExportarPDF_Click"/>
+                                    <Button Content="📗 Exportar Excel" Background="#10B981" Foreground="White" FontWeight="Bold" Padding="15,10" BorderThickness="0" Cursor="Hand" Click="BtnExportarExcel_Click"/>
+                                </StackPanel>
+                            </Grid>
+                        </Grid>
+                    </TabItem>
+
+                    <TabItem Header="🗄️ Archivo Histórico">
+                        <Grid Background="White" Margin="0,10,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Text="Reportes generados y guardados en el sistema:" FontSize="16" FontWeight="Bold" Foreground="#475569" Margin="15,15,0,10"/>
+
+                            <DataGrid x:Name="dgArchivoHistorico" Grid.Row="1" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
+                                      HeadersVisibility="Column" GridLinesVisibility="Horizontal" Margin="15,0,15,15">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Fecha Generación" Binding="{Binding FechaGeneracion}" Width="150"/>
+                                    <DataGridTextColumn Header="Rango del Turno" Binding="{Binding Turno}" Width="200"/>
+                                    <DataGridTextColumn Header="Generado Por" Binding="{Binding GeneradoPor}" Width="150"/>
+                                    <DataGridTemplateColumn Header="Documento" Width="*">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Button Content="📂 Abrir PDF" Background="#334155" Foreground="White" FontWeight="Bold" Padding="10,2" BorderThickness="0" Cursor="Hand" Click="BtnAbrirArchivo_Click" CommandParameter="{Binding RutaArchivo}"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Grid>
+                    </TabItem>
+
+                </TabControl>
             </Grid>
 
         </Grid>
