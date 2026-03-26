@@ -60,6 +60,7 @@ namespace prueba1 // Asegúrate de que coincida con tu namespace (prueba1 o prue
             
             INSERT OR IGNORE INTO Usuarios_Sistema (Username, PasswordHash, Rol) VALUES ('admin', '1234', 'ADMIN');
             INSERT OR IGNORE INTO Usuarios_Sistema (Username, PasswordHash, Rol) VALUES ('guardia', '1234', 'GUARDIA');
+
             ";
          
 

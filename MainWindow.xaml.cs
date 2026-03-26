@@ -13,6 +13,12 @@ namespace prueba1 // Asegúrate de que diga prueba1 o prueva1 según tu proyecto
         private DPFP.Capture.Capture Capturer;
         private Verification Verificator;
 
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+            // Este botón actualmente está oculto (Visibility="Collapsed")
+            // Aquí puedes poner código para simular una huella en el futuro si tu lector falla en las pruebas.
+        }
+
         public MainWindow()
         {
             InitializeComponent();
@@ -243,9 +249,9 @@ namespace prueba1 // Asegúrate de que diga prueba1 o prueva1 según tu proyecto
             return image;
         }
 
-        private void Button_Click(object sender, RoutedEventArgs e) { }
+       
 
-        private void OpenLogin_Click(object sender, RoutedEventArgs e)
+            private void OpenLogin_Click(object sender, RoutedEventArgs e)
         {
             // Pausamos el sensor para prestárselo a otras ventanas
             DetenerCaptura();
@@ -253,20 +259,16 @@ namespace prueba1 // Asegúrate de que diga prueba1 o prueva1 según tu proyecto
             LoginWindow login = new LoginWindow();
             if (login.ShowDialog() == true)
             {
-                if (login.RolUsuario == "ADMIN")
-                {
-                    PanelAdminWindow panelAdmin = new PanelAdminWindow();
-                    panelAdmin.ShowDialog();
-                }
-                else
-                {
-                    MessageBox.Show("Sesión iniciada como Guardia.", "Acceso Autorizado", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
+                // En lugar de un MessageBox, abrimos el panel para AMBOS roles, 
+                // pero le pasamos el rol (ADMIN o GUARDIA) como parámetro
+                PanelAdminWindow panelAdmin = new PanelAdminWindow(login.RolUsuario);
+                panelAdmin.ShowDialog();
             }
 
             // Al cerrar las ventanas, reactivamos el sensor
             IniciarCaptura();
         }
+        
 
         private void Test_Click(object sender, RoutedEventArgs e) { }
         private void CloseWindow_Click(object sender, RoutedEventArgs e) { Application.Current.Shutdown(); }
