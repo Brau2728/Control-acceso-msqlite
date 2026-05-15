@@ -5,30 +5,30 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Imaging;
-using System.Drawing; // Necesario para procesar la imagen de la huella
-using prueva1;
-using DPFP; // Librería base del lector
-using DPFP.Capture; // Para la captura
-using DPFP.Processing; // Para extraer características y crear el template
+using System.Drawing; 
+using DPFP; 
+using DPFP.Capture; 
+using DPFP.Processing; 
 
 namespace prueba1 
 {
     public partial class RegistroPersonal : Window, DPFP.Capture.EventHandler
     {
-        private DPFP.Template templateHuella = null; 
+        // 💡 SOLUCIÓN: Guardamos los Bytes en crudo inmediatamente para evitar que el lector los sobreescriba
+        private byte[] _huella1Bytes = null; 
+        private byte[] _huella2Bytes = null; 
+        private byte[] _huella3Bytes = null; 
+        
+        private int _dedoActual = 1; 
+        private bool _huellasModificadas = false;
 
-        // Variables nativas para el lector
         private DPFP.Capture.Capture Capturer;
         private DPFP.Processing.Enrollment Enroller;
 
-        // Variables para el MODO EDICIÓN
         private bool _esEdicion = false;
         private string _matriculaOriginal = "";
-        
-        // EL DETECTOR DE CAMBIOS DE FOTO (La solución al problema)
         private bool _fotoModificada = false; 
 
-        // 1. CONSTRUCTOR NORMAL (Nuevo Registro)
         public RegistroPersonal()
         {
             InitializeComponent();
@@ -36,14 +36,13 @@ namespace prueba1
             this.Closed += RegistroPersonal_Closed;
         }
 
-        // 2. CONSTRUCTOR SOBRECARGADO (Modo Edición)
-        public RegistroPersonal(string matriculaEditar) : this() // Llama al constructor normal primero
+        public RegistroPersonal(string matriculaEditar) : this() 
         {
             _esEdicion = true;
             _matriculaOriginal = matriculaEditar;
             
             this.Title = "Editar Personal Naval - " + matriculaEditar;
-            txtMatricula.IsEnabled = false; // Bloqueamos la matrícula para evitar errores de BD
+            txtMatricula.IsEnabled = false; 
             
             CargarDatosEdicion(matriculaEditar);
         }
@@ -67,11 +66,10 @@ namespace prueba1
                             txtNombres.Text = reader["Nombres"].ToString();
                             txtApellidos.Text = reader["Apellidos"].ToString();
 
-                            int idGrado = Convert.ToInt32(reader["IdGrado"]);
-                            int idJefa = Convert.ToInt32(reader["IdJefatura"]);
+                            cmbGrado.SelectedIndex = Convert.ToInt32(reader["IdGrado"]) - 1;
+                            cmbJefatura.SelectedIndex = Convert.ToInt32(reader["IdJefatura"]) - 1;
 
-                            cmbGrado.SelectedIndex = idGrado - 1;
-                            cmbJefatura.SelectedIndex = idJefa - 1;
+                            btnGuardarRegistro.IsEnabled = true;
 
                             if (reader["FotoPerfil"] != DBNull.Value)
                             {
@@ -94,10 +92,7 @@ namespace prueba1
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error al cargar los datos: " + ex.Message);
-            }
+            catch (Exception ex) { MessageBox.Show("Error al cargar los datos: " + ex.Message); }
         }
         #endregion
 
@@ -109,7 +104,11 @@ namespace prueba1
             
             if (_esEdicion)
             {
-                ActualizarEstadoUI("Modo Edición: Escanee 4 veces solo si desea CAMBIAR la huella.", System.Windows.Media.Brushes.Purple);
+                ActualizarEstadoUI("Modo Edición: Coloque un dedo SOLAMENTE si desea REEMPLAZAR las 3 huellas actuales.", System.Windows.Media.Brushes.Purple);
+            }
+            else
+            {
+                ActualizarEstadoUI("PASO 1/3: Coloque su ÍNDICE DERECHO en el lector 4 veces.", System.Windows.Media.Brushes.Blue);
             }
         }
 
@@ -123,7 +122,7 @@ namespace prueba1
                 Enroller = new DPFP.Processing.Enrollment(); 
                 if (Capturer != null) Capturer.EventHandler = this; 
             }
-            catch (Exception ex) { }
+            catch { }
         }
 
         private void IniciarCaptura() { if (Capturer != null) { try { Capturer.StartCapture(); } catch { } } }
@@ -134,18 +133,15 @@ namespace prueba1
         public void OnComplete(object Capture, string ReaderSerialNumber, DPFP.Sample Sample) { ProcesarHuella(Sample); }
         public void OnFingerGone(object Capture, string ReaderSerialNumber) { }
         public void OnFingerTouch(object Capture, string ReaderSerialNumber) { }
-        public void OnReaderConnect(object Capture, string ReaderSerialNumber) 
-        {
-            if (!_esEdicion) ActualizarEstadoUI("Lector conectado. Coloque su dedo.", System.Windows.Media.Brushes.Blue);
-        }
+        public void OnReaderConnect(object Capture, string ReaderSerialNumber) { }
         public void OnReaderDisconnect(object Capture, string ReaderSerialNumber) 
         {
-            ActualizarEstadoUI("Lector desconectado.", System.Windows.Media.Brushes.Red);
+            ActualizarEstadoUI("⚠️ Lector desconectado. Revise el cable.", System.Windows.Media.Brushes.Red);
         }
         public void OnSampleQuality(object Capture, string ReaderSerialNumber, DPFP.Capture.CaptureFeedback CaptureFeedback) { }
         #endregion
 
-        #region Procesamiento y Visualización de la Huella
+        #region Procesamiento MULTI-HUELLA (El Algoritmo Principal)
         private void ProcesarHuella(DPFP.Sample Sample)
         {
             MostrarImagenHuella(Sample);
@@ -161,18 +157,42 @@ namespace prueba1
                         switch (Enroller.TemplateStatus)
                         {
                             case DPFP.Processing.Enrollment.Status.Ready:
-                                templateHuella = Enroller.Template;
-                                ActualizarEstadoUI("Nueva huella registrada exitosamente ✔️", System.Windows.Media.Brushes.Green);
-                                DetenerCaptura(); 
+                                if (_dedoActual == 1)
+                                {
+                                    // 💡 EXTRAEMOS LOS BYTES AL INSTANTE Y CREAMOS UN ENROLLER NUEVO
+                                    _huella1Bytes = Enroller.Template.Bytes;
+                                    _dedoActual++;
+                                    Enroller = new DPFP.Processing.Enrollment(); 
+                                    ActualizarEstadoUI("✔️ Dedo 1 OK. \nPASO 2/3: Ahora coloque su ÍNDICE IZQUIERDO 4 veces.", System.Windows.Media.Brushes.DarkOrange);
+                                    IniciarCaptura();
+                                }
+                                else if (_dedoActual == 2)
+                                {
+                                    _huella2Bytes = Enroller.Template.Bytes;
+                                    _dedoActual++;
+                                    Enroller = new DPFP.Processing.Enrollment(); 
+                                    ActualizarEstadoUI("✔️ Dedo 2 OK. \nPASO 3/3: Por último, coloque su PULGAR 4 veces.", System.Windows.Media.Brushes.Purple);
+                                    IniciarCaptura();
+                                }
+                                else if (_dedoActual == 3)
+                                {
+                                    _huella3Bytes = Enroller.Template.Bytes;
+                                    _huellasModificadas = true;
+                                    btnGuardarRegistro.IsEnabled = true; 
+                                    ActualizarEstadoUI("✅ ¡ÉXITO! Las 3 huellas han sido registradas. Ya puede guardar.", System.Windows.Media.Brushes.Green);
+                                    DetenerCaptura(); 
+                                }
                                 break;
+
                             case DPFP.Processing.Enrollment.Status.Failed:
-                                Enroller.Clear();
+                                Enroller = new DPFP.Processing.Enrollment(); // Reinicio seguro
                                 DetenerCaptura();
-                                ActualizarEstadoUI("Fallo al registrar huella. Intente de nuevo ❌", System.Windows.Media.Brushes.Red);
+                                ActualizarEstadoUI($"❌ Fallo al leer Dedo {_dedoActual}. Limpie el sensor e intente de nuevo.", System.Windows.Media.Brushes.Red);
                                 IniciarCaptura();
                                 break;
+
                             case DPFP.Processing.Enrollment.Status.Insufficient:
-                                ActualizarEstadoUI($"Faltan {Enroller.FeaturesNeeded} lecturas. Vuelva a colocar el dedo.", System.Windows.Media.Brushes.DarkOrange);
+                                ActualizarEstadoUI($"[Dedo {_dedoActual}] Faltan {Enroller.FeaturesNeeded} toques. Vuelva a poner el mismo dedo.", System.Windows.Media.Brushes.DarkSlateGray);
                                 break;
                         }
                     });
@@ -204,9 +224,7 @@ namespace prueba1
                         this.Dispatcher.Invoke(() =>
                         {
                             if (this.FindName("imgHuella") is System.Windows.Controls.Image cuadroHuella)
-                            {
                                 cuadroHuella.Source = bi;
-                            }
                         });
                     }
                 }
@@ -237,18 +255,16 @@ namespace prueba1
         }
         #endregion
 
-        #region Lógica de Registro / Actualización (Botones y Foto)
-        
-        // SI EL USUARIO TOCA CUALQUIERA DE ESTOS CONTROLES, ACTIVAMOS LA BANDERA DE _fotoModificada
+        #region Lógica de Registro / Actualización
         private void BtnFoto_Click(object sender, RoutedEventArgs e)
         {
             OpenFileDialog op = new OpenFileDialog();
-            op.Title = "Seleccionar imagen";
+            op.Title = "Seleccionar imagen de perfil";
             op.Filter = "Archivos de imagen|*.jpg;*.jpeg;*.png";
             if (op.ShowDialog() == true) 
             {
                 imgFoto.Source = new BitmapImage(new Uri(op.FileName));
-                _fotoModificada = true; // <--- SE ACTIVÓ EL DETECTOR
+                _fotoModificada = true; 
             }
         }
         
@@ -262,13 +278,13 @@ namespace prueba1
             if (string.IsNullOrWhiteSpace(txtMatricula.Text) || string.IsNullOrWhiteSpace(txtNombres.Text) ||
                 cmbGrado.SelectedItem == null || cmbJefatura.SelectedItem == null) 
             {
-                MessageBox.Show("Faltan datos obligatorios.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Faltan datos obligatorios. Llene todos los campos de texto.", "Advertencia", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            if (!_esEdicion && templateHuella == null)
+            if (!_esEdicion && !_huellasModificadas)
             {
-                MessageBox.Show("No se ha terminado de registrar la huella (se requieren 4 lecturas).", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Debe completar el registro de los 3 dedos antes de guardar.", "Huellas Incompletas", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -280,61 +296,48 @@ namespace prueba1
                     
                     if (_esEdicion)
                     {
-                        // MODO EDICIÓN: Solo actualiza la foto SI EL DETECTOR SE ACTIVÓ
-                        query = @"UPDATE Personal_Naval 
-                                  SET Nombres = @nom, Apellidos = @ape, IdGrado = @idGrado, IdJefatura = @idJefa";
-                                  
+                        query = @"UPDATE Personal_Naval SET Nombres = @nom, Apellidos = @ape, IdGrado = @idGrado, IdJefatura = @idJefa";
                         if (_fotoModificada) query += ", FotoPerfil = @foto";
-                        if (templateHuella != null) query += ", Huella = @huella";
-                        
+                        if (_huellasModificadas) query += ", Huella = @h1, Huella2 = @h2, Huella3 = @h3";
                         query += " WHERE Matricula = @matOriginal";
                     }
                     else
                     {
                         query = @"INSERT INTO Personal_Naval 
-                                 (Matricula, Nombres, Apellidos, IdGrado, IdJefatura, FotoPerfil, Huella) 
-                                 VALUES (@mat, @nom, @ape, @idGrado, @idJefa, @foto, @huella)";
+                                 (Matricula, Nombres, Apellidos, IdGrado, IdJefatura, FotoPerfil, Huella, Huella2, Huella3) 
+                                 VALUES (@mat, @nom, @ape, @idGrado, @idJefa, @foto, @h1, @h2, @h3)";
                     }
 
                     SQLiteCommand cmd = new SQLiteCommand(query, conexion);
                     
-                    cmd.Parameters.AddWithValue("@mat", txtMatricula.Text);
-                    cmd.Parameters.AddWithValue("@nom", txtNombres.Text);
-                    cmd.Parameters.AddWithValue("@ape", txtApellidos.Text);
+                    cmd.Parameters.AddWithValue("@mat", txtMatricula.Text.Trim());
+                    cmd.Parameters.AddWithValue("@nom", txtNombres.Text.Trim());
+                    cmd.Parameters.AddWithValue("@ape", txtApellidos.Text.Trim());
                     if (_esEdicion) cmd.Parameters.AddWithValue("@matOriginal", _matriculaOriginal);
                     
-                    int idGrado = int.Parse(((ComboBoxItem)cmbGrado.SelectedItem).Tag.ToString());
-                    int idJefa = int.Parse(((ComboBoxItem)cmbJefatura.SelectedItem).Tag.ToString());
-                    cmd.Parameters.AddWithValue("@idGrado", idGrado);
-                    cmd.Parameters.AddWithValue("@idJefa", idJefa);
+                    cmd.Parameters.AddWithValue("@idGrado", int.Parse(((ComboBoxItem)cmbGrado.SelectedItem).Tag.ToString()));
+                    cmd.Parameters.AddWithValue("@idJefa", int.Parse(((ComboBoxItem)cmbJefatura.SelectedItem).Tag.ToString()));
 
-                    // SOLO TOMAMOS LA CAPTURA SI ES UN REGISTRO NUEVO O SI MODIFICARON LA FOTO EN EDICIÓN
-                    // SOLO TOMAMOS LA CAPTURA SI ES UN REGISTRO NUEVO O SI MODIFICARON LA FOTO EN EDICIÓN
-                    if (!_esEdicion || _fotoModificada)
+                    if (_fotoModificada)
                     {
                         if (imgFoto.Source != null && this.FindName("bdrFoto") is Border bordeFoto)
                         {
-                            // MULTIPLICADOR DE CALIDAD: x4 (Convertimos 160x190 a 640x760 HD)
                             int escala = 4; 
                             int w = (int)bordeFoto.ActualWidth * escala;
                             int h = (int)bordeFoto.ActualHeight * escala;
 
-                            System.Windows.Media.VisualBrush pincelVisual = new System.Windows.Media.VisualBrush(bordeFoto);
                             System.Windows.Media.DrawingVisual dibujoVisual = new System.Windows.Media.DrawingVisual();
-                            
                             using (System.Windows.Media.DrawingContext contexto = dibujoVisual.RenderOpen())
                             {
-                                // Le decimos a WPF que agrande el pincel antes de pintar para no perder calidad
                                 contexto.PushTransform(new System.Windows.Media.ScaleTransform(escala, escala));
-                                contexto.DrawRectangle(pincelVisual, null, new Rect(0, 0, bordeFoto.ActualWidth, bordeFoto.ActualHeight));
+                                contexto.DrawRectangle(new System.Windows.Media.VisualBrush(bordeFoto), null, new Rect(0, 0, bordeFoto.ActualWidth, bordeFoto.ActualHeight));
                             }
 
                             RenderTargetBitmap renderTarget = new RenderTargetBitmap(w, h, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
                             renderTarget.Render(dibujoVisual);
 
                             JpegBitmapEncoder encoder = new JpegBitmapEncoder();
-                            // Usamos una calidad alta para el JPEG (95%)
-                            encoder.QualityLevel = 95; 
+                            encoder.QualityLevel = 90; 
                             encoder.Frames.Add(BitmapFrame.Create(renderTarget));
                             
                             using (MemoryStream ms = new MemoryStream())
@@ -343,27 +346,28 @@ namespace prueba1
                                 cmd.Parameters.AddWithValue("@foto", ms.ToArray()); 
                             }
                         }
-                        else
-                        {
-                            cmd.Parameters.AddWithValue("@foto", DBNull.Value);
-                        }
                     }
-
-                    if (templateHuella != null) cmd.Parameters.AddWithValue("@huella", templateHuella.Bytes);
-
-                    int filas = cmd.ExecuteNonQuery();
-
-                    if (filas > 0)
+                    else if (!_esEdicion) 
                     {
-                        string msgExito = _esEdicion ? "Datos actualizados correctamente." : "Personal registrado correctamente.";
-                        MessageBox.Show(msgExito, "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
-                        this.Close(); 
+                        cmd.Parameters.AddWithValue("@foto", DBNull.Value);
                     }
+
+                    if (_huellasModificadas)
+                    {
+                        cmd.Parameters.AddWithValue("@h1", _huella1Bytes);
+                        cmd.Parameters.AddWithValue("@h2", _huella2Bytes);
+                        cmd.Parameters.AddWithValue("@h3", _huella3Bytes);
+                    }
+
+                    cmd.ExecuteNonQuery();
+
+                    MessageBox.Show(_esEdicion ? "Datos actualizados correctamente." : "Personal y sus 3 huellas registrados correctamente.", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                    this.Close(); 
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error al guardar en BD: " + ex.Message);
+                MessageBox.Show("Error crítico al guardar en Base de Datos: " + ex.Message, "Error SQL", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

@@ -36,11 +36,12 @@ namespace prueba1 // Asegúrate de que coincida con tu namespace (prueba1 o prue
                 IdJefatura INTEGER, 
                 FotoPerfil BLOB, 
                 Huella BLOB,
+                Huella2 BLOB, -- NUEVO: Dedo 2
+                Huella3 BLOB, -- NUEVO: Dedo 3
                 Estatus TEXT DEFAULT 'ACTIVO',
                 Novedad TEXT DEFAULT 'PRESENTE'
             );
             
-            -- ¡NUEVA TABLA PARA EL HISTORIAL DE ACCESOS! --
             CREATE TABLE IF NOT EXISTS Registro_Accesos (
                 IdRegistro INTEGER PRIMARY KEY AUTOINCREMENT,
                 Matricula TEXT,
@@ -49,7 +50,6 @@ namespace prueba1 // Asegúrate de que coincida con tu namespace (prueba1 o prue
                 NovedadMomento TEXT
             );
 
-            -- NUEVA TABLA PARA EL ARCHIVO HISTÓRICO DE REPORTES --
             CREATE TABLE IF NOT EXISTS Historial_Reportes (
                 IdReporte INTEGER PRIMARY KEY AUTOINCREMENT,
                 FechaGeneracion TEXT,
@@ -60,21 +60,20 @@ namespace prueba1 // Asegúrate de que coincida con tu namespace (prueba1 o prue
             
             INSERT OR IGNORE INTO Usuarios_Sistema (Username, PasswordHash, Rol) VALUES ('admin', '1234', 'ADMIN');
             INSERT OR IGNORE INTO Usuarios_Sistema (Username, PasswordHash, Rol) VALUES ('guardia', '1234', 'GUARDIA');
-
             ";
-         
-
-           
-
 
             using (SQLiteCommand cmd = new SQLiteCommand(sql, conexion))
             {
                 cmd.ExecuteNonQuery();
             }
 
-            // Parches para BD existentes
+            // Parches silenciosos para Bases de Datos que ya existen (No borra tu info actual)
             try { using (SQLiteCommand cmd = new SQLiteCommand("ALTER TABLE Personal_Naval ADD COLUMN Estatus TEXT DEFAULT 'ACTIVO'", conexion)) { cmd.ExecuteNonQuery(); } } catch { }
             try { using (SQLiteCommand cmd = new SQLiteCommand("ALTER TABLE Personal_Naval ADD COLUMN Novedad TEXT DEFAULT 'PRESENTE'", conexion)) { cmd.ExecuteNonQuery(); } } catch { }
+            
+            // Parches para las nuevas huellas
+            try { using (SQLiteCommand cmd = new SQLiteCommand("ALTER TABLE Personal_Naval ADD COLUMN Huella2 BLOB", conexion)) { cmd.ExecuteNonQuery(); } } catch { }
+            try { using (SQLiteCommand cmd = new SQLiteCommand("ALTER TABLE Personal_Naval ADD COLUMN Huella3 BLOB", conexion)) { cmd.ExecuteNonQuery(); } } catch { }
 
             return conexion;
         }

@@ -3,21 +3,17 @@ using System.Data.SQLite;
 using System.IO;
 using System.Windows;
 using System.Windows.Media.Imaging;
-using DPFP; // Lector
-using DPFP.Verification; // Verificador
+using DPFP; 
+using DPFP.Verification; 
 
-namespace prueba1 // Asegúrate de que diga prueba1 o prueva1 según tu proyecto
+namespace prueba1 
 {
     public partial class MainWindow : Window, DPFP.Capture.EventHandler
     {
         private DPFP.Capture.Capture Capturer;
         private Verification Verificator;
 
-        private void Button_Click(object sender, RoutedEventArgs e)
-        {
-            // Este botón actualmente está oculto (Visibility="Collapsed")
-            // Aquí puedes poner código para simular una huella en el futuro si tu lector falla en las pruebas.
-        }
+        private void Button_Click(object sender, RoutedEventArgs e) { }
 
         public MainWindow()
         {
@@ -33,10 +29,7 @@ namespace prueba1 // Asegúrate de que diga prueba1 o prueva1 según tu proyecto
             IniciarCaptura();
         }
 
-        private void MainWindow_Closed(object sender, EventArgs e)
-        {
-            DetenerCaptura();
-        }
+        private void MainWindow_Closed(object sender, EventArgs e) { DetenerCaptura(); }
 
         private void InitHuella()
         {
@@ -44,14 +37,9 @@ namespace prueba1 // Asegúrate de que diga prueba1 o prueva1 según tu proyecto
             {
                 Capturer = new DPFP.Capture.Capture();
                 Verificator = new Verification();
-
-                if (Capturer != null)
-                    Capturer.EventHandler = this;
+                if (Capturer != null) Capturer.EventHandler = this;
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error al inicializar lector: " + ex.Message);
-            }
+            catch (Exception ex) { MessageBox.Show("Error al inicializar lector: " + ex.Message); }
         }
 
         private void IniciarCaptura() { if (Capturer != null) { try { Capturer.StartCapture(); } catch { } } }
@@ -59,11 +47,7 @@ namespace prueba1 // Asegúrate de que diga prueba1 o prueva1 según tu proyecto
         #endregion
 
         #region Eventos del Lector
-        public void OnComplete(object Capture, string ReaderSerialNumber, Sample Sample)
-        {
-            ProcesarHuella(Sample);
-        }
-
+        public void OnComplete(object Capture, string ReaderSerialNumber, Sample Sample) { ProcesarHuella(Sample); }
         public void OnFingerGone(object Capture, string ReaderSerialNumber) { }
         public void OnFingerTouch(object Capture, string ReaderSerialNumber) { }
         public void OnReaderConnect(object Capture, string ReaderSerialNumber) { }
@@ -93,6 +77,25 @@ namespace prueba1 // Asegúrate de que diga prueba1 o prueva1 según tu proyecto
             }
         }
 
+        private bool CompararHuella(DPFP.FeatureSet features, object huellaBDObj)
+        {
+            if (huellaBDObj == null || huellaBDObj == DBNull.Value) return false;
+            
+            try 
+            {
+                byte[] huellaBD = (byte[])huellaBDObj;
+                DPFP.Template templateGuardado = new DPFP.Template();
+                using (MemoryStream stream = new MemoryStream(huellaBD))
+                {
+                    templateGuardado = new DPFP.Template(stream);
+                }
+                Verification.Result result = new Verification.Result();
+                Verificator.Verify(features, templateGuardado, ref result);
+                return result.Verified;
+            }
+            catch { return false; }
+        }
+
         private void VerificarEnBaseDeDatos(DPFP.FeatureSet featuresCapturadas)
         {
             bool accesoConcedido = false;
@@ -102,63 +105,59 @@ namespace prueba1 // Asegúrate de que diga prueba1 o prueva1 según tu proyecto
             {
                 using (SQLiteConnection conexion = ConexionDB.ObtenerConexion())
                 {
-                    string query = "SELECT Matricula, Nombres, Apellidos, IdGrado, IdJefatura, FotoPerfil, Huella, Estatus, Novedad FROM Personal_Naval";
+                    string query = "SELECT Matricula, Nombres, Apellidos, IdGrado, IdJefatura, FotoPerfil, Huella, Huella2, Huella3, Estatus, Novedad FROM Personal_Naval";
                     using (SQLiteCommand cmd = new SQLiteCommand(query, conexion))
                     using (SQLiteDataReader reader = cmd.ExecuteReader())
                     {
                         while (reader.Read())
                         {
-                            if (reader["Huella"] != DBNull.Value)
+                            // BUSCAMOS EN LAS 3 HUELLAS
+                            bool match1 = CompararHuella(featuresCapturadas, reader["Huella"]);
+                            bool match2 = CompararHuella(featuresCapturadas, reader["Huella2"]);
+                            bool match3 = CompararHuella(featuresCapturadas, reader["Huella3"]);
+
+                            if (match1 || match2 || match3)
                             {
-                                byte[] huellaBD = (byte[])reader["Huella"];
-
-                                DPFP.Template templateGuardado = new DPFP.Template();
-                                using (MemoryStream stream = new MemoryStream(huellaBD))
+                                accesoConcedido = true;
+                                marinoEncontrado = new Marino
                                 {
-                                    templateGuardado = new DPFP.Template(stream);
-                                }
+                                    Matricula = reader["Matricula"].ToString(),
+                                    Nombre = reader["Nombres"].ToString(),
+                                    Apellidos = reader["Apellidos"].ToString(),
+                                    Grado = ObtenerNombreGrado(Convert.ToInt32(reader["IdGrado"])),
+                                    Jefatura = ObtenerNombreJefatura(Convert.ToInt32(reader["IdJefatura"])),
+                                    Estatus = reader["Estatus"].ToString(),
+                                    Novedad = reader["Novedad"].ToString()
+                                };
 
-                                Verification.Result result = new Verification.Result();
-                                Verificator.Verify(featuresCapturadas, templateGuardado, ref result);
-
-                                if (result.Verified)
+                                if (reader["FotoPerfil"] != DBNull.Value)
                                 {
-                                    accesoConcedido = true;
-                                    marinoEncontrado = new Marino
-                                    {
-                                        Matricula = reader["Matricula"].ToString(),
-                                        Nombre = reader["Nombres"].ToString(),
-                                        Apellidos = reader["Apellidos"].ToString(),
-                                        Grado = ObtenerNombreGrado(Convert.ToInt32(reader["IdGrado"])),
-                                        Jefatura = ObtenerNombreJefatura(Convert.ToInt32(reader["IdJefatura"])),
-                                        Estatus = reader["Estatus"].ToString(),
-                                        Novedad = reader["Novedad"].ToString()
-                                    };
-
-                                    if (reader["FotoPerfil"] != DBNull.Value)
-                                    {
-                                        byte[] fotoBytes = (byte[])reader["FotoPerfil"];
-                                        marinoEncontrado.FotoImagen = ConvertirBytesAImagen(fotoBytes);
-                                    }
-                                    else
-                                    {
-                                        marinoEncontrado.FotoImagen = new BitmapImage(new Uri("https://cdn-icons-png.flaticon.com/512/3135/3135715.png"));
-                                    }
-
-                                    break;
+                                    byte[] fotoBytes = (byte[])reader["FotoPerfil"];
+                                    marinoEncontrado.FotoImagen = ConvertirBytesAImagen(fotoBytes); // Esto se congela internamente
                                 }
+                                else
+                                {
+                                    // Dejamos en null temporalmente para evitar el error de hilos con la imagen web
+                                    marinoEncontrado.FotoImagen = null; 
+                                }
+                                break;
                             }
                         }
                     }
                 }
 
-                // --- LÓGICA DE DECISIÓN DE COLORES Y REGISTRO DE HISTORIAL ---
                 this.Dispatcher.Invoke(() =>
                 {
                     if (this.DataContext is MainViewModel vm)
                     {
                         if (accesoConcedido && marinoEncontrado != null)
                         {
+                            // 💡 SOLUCIÓN SEGURA: Asignamos la imagen web directamente en la interfaz gráfica
+                            if (marinoEncontrado.FotoImagen == null)
+                            {
+                                marinoEncontrado.FotoImagen = new BitmapImage(new Uri("https://cdn-icons-png.flaticon.com/512/3135/3135715.png"));
+                            }
+
                             if (marinoEncontrado.Estatus == "BAJA")
                             {
                                 vm.AccesoDenegadoBaja(marinoEncontrado);
@@ -178,7 +177,6 @@ namespace prueba1 // Asegúrate de que diga prueba1 o prueva1 según tu proyecto
                         else
                         {
                             vm.AccesoDenegado();
-                            // Registramos intentos de huellas no reconocidas
                             GuardarHistorialAcceso("DESCONOCIDA", "INTENTO RECHAZADO", "-");
                         }
                     }
@@ -190,7 +188,6 @@ namespace prueba1 // Asegúrate de que diga prueba1 o prueva1 según tu proyecto
             }
         }
 
-        // --- NUEVA FUNCIÓN PARA GUARDAR EL HISTORIAL ---
         private void GuardarHistorialAcceso(string matricula, string mensajeAcceso, string novedad)
         {
             try
@@ -209,10 +206,7 @@ namespace prueba1 // Asegúrate de que diga prueba1 o prueva1 según tu proyecto
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error al guardar historial: " + ex.Message);
-            }
+            catch (Exception ex) { Console.WriteLine("Error al guardar historial: " + ex.Message); }
         }
         #endregion
 
@@ -245,32 +239,22 @@ namespace prueba1 // Asegúrate de que diga prueba1 o prueva1 según tu proyecto
                 image.StreamSource = mem;
                 image.EndInit();
             }
-            image.Freeze();
+            image.Freeze(); 
             return image;
         }
 
-       
-
-            private void OpenLogin_Click(object sender, RoutedEventArgs e)
+        private void OpenLogin_Click(object sender, RoutedEventArgs e)
         {
-            // Pausamos el sensor para prestárselo a otras ventanas
             DetenerCaptura();
-
             LoginWindow login = new LoginWindow();
             if (login.ShowDialog() == true)
             {
-                // En lugar de un MessageBox, abrimos el panel para AMBOS roles, 
-                // pero le pasamos el rol (ADMIN o GUARDIA) como parámetro
                 PanelAdminWindow panelAdmin = new PanelAdminWindow(login.RolUsuario);
                 panelAdmin.ShowDialog();
             }
-
-            // Al cerrar las ventanas, reactivamos el sensor
             IniciarCaptura();
         }
-        
 
-        private void Test_Click(object sender, RoutedEventArgs e) { }
         private void CloseWindow_Click(object sender, RoutedEventArgs e) { Application.Current.Shutdown(); }
         #endregion
     }

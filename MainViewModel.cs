@@ -2,7 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Media;
-using System.Windows.Media.Imaging; // Necesario para cargar la imagen de error
+using System.Windows.Media.Imaging; 
 using System.Windows.Threading;
 
 namespace prueba1
@@ -28,12 +28,10 @@ namespace prueba1
             _relojTimer.Tick += (s, e) => FechaHoraActual = DateTime.Now.ToString("dd/MM/yyyy | HH:mm:ss");
             _relojTimer.Start();
 
-            // Tiempo que dura el mensaje en pantalla antes de borrarse
             _limpiezaTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
             _limpiezaTimer.Tick += (s, e) => LimpiarPantalla();
         }
 
-        // 1. ÉXITO
         public void AccesoAutorizado(Marino marino)
         {
             _limpiezaTimer.Stop();
@@ -43,12 +41,13 @@ namespace prueba1
             _limpiezaTimer.Start(); 
         }
 
-        // 2. LA HUELLA SE LEYÓ BIEN, PERO NO EXISTE EN LA BASE DE DATOS
         public void AccesoDenegado()
         {
             _limpiezaTimer.Stop();
             
-            // Creamos un perfil falso para forzar a la pantalla a mostrar el error
+            // 💡 SOLUCIÓN: Quitamos el Freeze() porque la imagen carga de internet
+            BitmapImage imgError = new BitmapImage(new Uri("https://cdn-icons-png.flaticon.com/512/1144/1144760.png"));
+
             MarinoActual = new Marino 
             {
                 Matricula = "--------",
@@ -56,7 +55,7 @@ namespace prueba1
                 Apellidos = "REGISTRADO",
                 Grado = "DESCONOCIDO",
                 Jefatura = "DENEGADO",
-                FotoImagen = new BitmapImage(new Uri("https://cdn-icons-png.flaticon.com/512/1144/1144760.png")) // Ícono rojo
+                FotoImagen = imgError
             };
             
             StatusMensaje = "❌ HUELLA NO RECONOCIDA";
@@ -64,7 +63,6 @@ namespace prueba1
             _limpiezaTimer.Start(); 
         }
 
-        // 3. LA HUELLA COINCIDE, PERO ESTÁ DADO DE BAJA
         public void AccesoDenegadoBaja(Marino marino)
         {
             _limpiezaTimer.Stop();
@@ -74,7 +72,6 @@ namespace prueba1
             _limpiezaTimer.Start();
         }
 
-        // 4. LA HUELLA COINCIDE, PERO TIENE UNA NOVEDAD (Vacaciones, Arresto, etc.)
         public void AccesoConNovedad(Marino marino)
         {
             _limpiezaTimer.Stop();
@@ -83,11 +80,14 @@ namespace prueba1
             StatusColor = Brushes.DarkOrange;
             _limpiezaTimer.Start();
         }
-        // 3. LA HUELLA FUE PUESTA MUY RÁPIDO, CHUECA O EL LECTOR ESTÁ SUCIO
+
         public void MalaCaptura()
         {
             _limpiezaTimer.Stop();
             
+            // 💡 SOLUCIÓN: Quitamos el Freeze() porque la imagen carga de internet
+            BitmapImage imgMala = new BitmapImage(new Uri("https://cdn-icons-png.flaticon.com/512/2807/2807350.png"));
+
             MarinoActual = new Marino 
             {
                 Matricula = "ERROR",
@@ -95,7 +95,7 @@ namespace prueba1
                 Apellidos = "INTENTAR",
                 Grado = "MALA LECTURA",
                 Jefatura = "SENSOR SUCIO O MOVIMIENTO",
-                FotoImagen = new BitmapImage(new Uri("https://cdn-icons-png.flaticon.com/512/2807/2807350.png")) // Ícono naranja
+                FotoImagen = imgMala
             };
             
             StatusMensaje = "⚠️ MALA LECTURA";
