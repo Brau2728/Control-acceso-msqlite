@@ -133,11 +133,11 @@ namespace prueba1
                                 if (reader["FotoPerfil"] != DBNull.Value)
                                 {
                                     byte[] fotoBytes = (byte[])reader["FotoPerfil"];
-                                    marinoEncontrado.FotoImagen = ConvertirBytesAImagen(fotoBytes); // Esto se congela internamente
+                                    marinoEncontrado.FotoImagen = ConvertirBytesAImagen(fotoBytes); 
                                 }
                                 else
                                 {
-                                    // Dejamos en null temporalmente para evitar el error de hilos con la imagen web
+                                    // 💡 FIX: Dejamos en null para evitar que el sistema se trabe buscando internet
                                     marinoEncontrado.FotoImagen = null; 
                                 }
                                 break;
@@ -152,12 +152,6 @@ namespace prueba1
                     {
                         if (accesoConcedido && marinoEncontrado != null)
                         {
-                            // 💡 SOLUCIÓN SEGURA: Asignamos la imagen web directamente en la interfaz gráfica
-                            if (marinoEncontrado.FotoImagen == null)
-                            {
-                                marinoEncontrado.FotoImagen = new BitmapImage(new Uri("https://cdn-icons-png.flaticon.com/512/3135/3135715.png"));
-                            }
-
                             if (marinoEncontrado.Estatus == "BAJA")
                             {
                                 vm.AccesoDenegadoBaja(marinoEncontrado);

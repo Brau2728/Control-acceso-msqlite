@@ -2,7 +2,7 @@
 using System.Data.SQLite;
 using System.IO;
 
-namespace prueba1 // Asegúrate de que coincida con tu namespace (prueba1 o prueva1)
+namespace prueba1 
 {
     public class ConexionDB
     {
@@ -36,8 +36,8 @@ namespace prueba1 // Asegúrate de que coincida con tu namespace (prueba1 o prue
                 IdJefatura INTEGER, 
                 FotoPerfil BLOB, 
                 Huella BLOB,
-                Huella2 BLOB, -- NUEVO: Dedo 2
-                Huella3 BLOB, -- NUEVO: Dedo 3
+                Huella2 BLOB, 
+                Huella3 BLOB, 
                 Estatus TEXT DEFAULT 'ACTIVO',
                 Novedad TEXT DEFAULT 'PRESENTE'
             );
@@ -70,10 +70,12 @@ namespace prueba1 // Asegúrate de que coincida con tu namespace (prueba1 o prue
             // Parches silenciosos para Bases de Datos que ya existen (No borra tu info actual)
             try { using (SQLiteCommand cmd = new SQLiteCommand("ALTER TABLE Personal_Naval ADD COLUMN Estatus TEXT DEFAULT 'ACTIVO'", conexion)) { cmd.ExecuteNonQuery(); } } catch { }
             try { using (SQLiteCommand cmd = new SQLiteCommand("ALTER TABLE Personal_Naval ADD COLUMN Novedad TEXT DEFAULT 'PRESENTE'", conexion)) { cmd.ExecuteNonQuery(); } } catch { }
-            
-            // Parches para las nuevas huellas
             try { using (SQLiteCommand cmd = new SQLiteCommand("ALTER TABLE Personal_Naval ADD COLUMN Huella2 BLOB", conexion)) { cmd.ExecuteNonQuery(); } } catch { }
             try { using (SQLiteCommand cmd = new SQLiteCommand("ALTER TABLE Personal_Naval ADD COLUMN Huella3 BLOB", conexion)) { cmd.ExecuteNonQuery(); } } catch { }
+            
+            // NUEVAS COLUMNAS PARA FECHAS DE NOVEDADES AUTOMATIZADAS
+            try { using (SQLiteCommand cmd = new SQLiteCommand("ALTER TABLE Personal_Naval ADD COLUMN FechaInicioNovedad DATE", conexion)) { cmd.ExecuteNonQuery(); } } catch { }
+            try { using (SQLiteCommand cmd = new SQLiteCommand("ALTER TABLE Personal_Naval ADD COLUMN FechaFinNovedad DATE", conexion)) { cmd.ExecuteNonQuery(); } } catch { }
 
             return conexion;
         }

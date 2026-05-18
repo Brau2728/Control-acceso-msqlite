@@ -1,8 +1,11 @@
 using System;
 using System.ComponentModel;
+using System.IO;
 using System.Runtime.CompilerServices;
+using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
-using System.Windows.Media.Imaging; 
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
 namespace prueba1
@@ -17,6 +20,9 @@ namespace prueba1
         private DispatcherTimer _relojTimer;
         private DispatcherTimer _limpiezaTimer;
 
+        // Propiedad para almacenar la imagen por defecto descargada
+        private BitmapImage _defaultProfileImage;
+
         public string StatusMensaje { get => _statusMensaje; set { _statusMensaje = value; OnPropertyChanged(); } }
         public Brush StatusColor { get => _statusColor; set { _statusColor = value; OnPropertyChanged(); } }
         public string FechaHoraActual { get => _fechaHoraActual; set { _fechaHoraActual = value; OnPropertyChanged(); } }
@@ -30,11 +36,61 @@ namespace prueba1
 
             _limpiezaTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
             _limpiezaTimer.Tick += (s, e) => LimpiarPantalla();
+
+            // Cargamos la imagen por defecto desde la carpeta local assets de forma inmediata
+            LoadDefaultImage();
+        }
+
+        // Método mejorado para asegurar que WPF encuentre la imagen
+        private void LoadDefaultImage()
+        {
+            try
+            {
+            // Ruta física en el directorio de ejecución (bin/Debug/assets/iconmarino.jpg)
+
+                string localImagePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "assets", "iconmarino.jpg");
+
+                if (File.Exists(localImagePath))
+                {
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        // 💡 FIX: Leemos la imagen a la memoria primero. 
+                        // Esto garantiza que WPF la cargue completa antes del Freeze() y permite que el archivo no quede bloqueado.
+                        byte[] imageBytes = File.ReadAllBytes(localImagePath);
+
+                        using (MemoryStream ms = new MemoryStream(imageBytes))
+                        {
+                            _defaultProfileImage = new BitmapImage();
+                            _defaultProfileImage.BeginInit();
+                            _defaultProfileImage.CacheOption = BitmapCacheOption.OnLoad;
+                            _defaultProfileImage.StreamSource = ms;
+                            _defaultProfileImage.EndInit();
+                            _defaultProfileImage.Freeze(); // Ahora sí, la congelamos de forma segura
+                        }
+                    });
+                }
+                else
+                {
+                    _defaultProfileImage = null; // Si no existe el archivo, no mostramos nada
+                }
+            }
+            catch (Exception)
+            {
+                // Si hay algún error (falta de permisos, etc.), la dejamos nula para no crashear
+                _defaultProfileImage = null; 
+            }
         }
 
         public void AccesoAutorizado(Marino marino)
         {
             _limpiezaTimer.Stop();
+            
+            // Asignamos la imagen por defecto si marino.FotoImagen es null
+            if (marino.FotoImagen == null)
+            {
+                marino.FotoImagen = _defaultProfileImage;
+            }
+
             MarinoActual = marino;
             StatusMensaje = "✅ ACCESO AUTORIZADO";
             StatusColor = new SolidColorBrush(Color.FromRgb(34, 139, 34)); 
@@ -45,9 +101,6 @@ namespace prueba1
         {
             _limpiezaTimer.Stop();
             
-            // 💡 SOLUCIÓN: Quitamos el Freeze() porque la imagen carga de internet
-            BitmapImage imgError = new BitmapImage(new Uri("https://cdn-icons-png.flaticon.com/512/1144/1144760.png"));
-
             MarinoActual = new Marino 
             {
                 Matricula = "--------",
@@ -55,7 +108,7 @@ namespace prueba1
                 Apellidos = "REGISTRADO",
                 Grado = "DESCONOCIDO",
                 Jefatura = "DENEGADO",
-                FotoImagen = imgError
+                FotoImagen = _defaultProfileImage // Usamos la imagen por defecto local
             };
             
             StatusMensaje = "❌ HUELLA NO RECONOCIDA";
@@ -66,6 +119,12 @@ namespace prueba1
         public void AccesoDenegadoBaja(Marino marino)
         {
             _limpiezaTimer.Stop();
+            
+            if (marino.FotoImagen == null)
+            {
+                marino.FotoImagen = _defaultProfileImage;
+            }
+
             MarinoActual = marino;
             StatusMensaje = "❌ ACCESO DENEGADO (BAJA)";
             StatusColor = Brushes.DarkRed;
@@ -75,6 +134,12 @@ namespace prueba1
         public void AccesoConNovedad(Marino marino)
         {
             _limpiezaTimer.Stop();
+
+            if (marino.FotoImagen == null)
+            {
+                marino.FotoImagen = _defaultProfileImage;
+            }
+
             MarinoActual = marino;
             StatusMensaje = $"⚠️ ATENCIÓN: {marino.Novedad}";
             StatusColor = Brushes.DarkOrange;
@@ -85,9 +150,6 @@ namespace prueba1
         {
             _limpiezaTimer.Stop();
             
-            // 💡 SOLUCIÓN: Quitamos el Freeze() porque la imagen carga de internet
-            BitmapImage imgMala = new BitmapImage(new Uri("https://cdn-icons-png.flaticon.com/512/2807/2807350.png"));
-
             MarinoActual = new Marino 
             {
                 Matricula = "ERROR",
@@ -95,7 +157,7 @@ namespace prueba1
                 Apellidos = "INTENTAR",
                 Grado = "MALA LECTURA",
                 Jefatura = "SENSOR SUCIO O MOVIMIENTO",
-                FotoImagen = imgMala
+                FotoImagen = _defaultProfileImage // Usamos la imagen por defecto local
             };
             
             StatusMensaje = "⚠️ MALA LECTURA";

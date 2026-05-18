@@ -1,0 +1,208 @@
+<UserControl x:Class="prueba1.DirectorioControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="Transparent">
+
+    <Grid>
+        <!-- CAPA PRINCIPAL DEL DIRECTORIO -->
+        <Grid Margin="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0" Text="Directorio del Personal Naval" FontSize="28" FontWeight="Black" Foreground="#0F172A" Margin="0,0,0,15"/>
+
+            <!-- Filtros de Búsqueda -->
+            <Border Grid.Row="1" Background="White" CornerRadius="12" Padding="20" Margin="0,0,0,20">
+                <Border.Effect><DropShadowEffect BlurRadius="15" ShadowDepth="2" Opacity="0.05" Color="Black"/></Border.Effect>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="🔍 Buscar Elemento:" VerticalAlignment="Center" FontWeight="Bold" Foreground="#475569" Margin="0,0,10,0"/>
+                    <Border BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="6" Margin="0,0,30,0" Background="White">
+                        <TextBox x:Name="txtBuscarPersonal" Width="250" Height="38" Padding="10,0" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center" TextChanged="FiltrosDirectorio_Changed"/>
+                    </Border>
+
+                    <TextBlock Text="Filtrar por Situación:" VerticalAlignment="Center" FontWeight="Bold" Foreground="#475569" Margin="0,0,10,0"/>
+                    <Border BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="8" Background="White">
+                        <ComboBox x:Name="cmbFiltroNovedad" Width="180" Height="38" Padding="10,0" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center" SelectionChanged="FiltrosDirectorio_Changed">
+                            <ComboBoxItem Content="TODOS" IsSelected="True"/>
+                            <ComboBoxItem Content="PRESENTE"/>
+                            <ComboBoxItem Content="FALTISTA"/>
+                            <ComboBoxItem Content="PERMISO"/>
+                            <ComboBoxItem Content="VACACIONES"/>
+                            <ComboBoxItem Content="COMISION"/>
+                            <ComboBoxItem Content="HOSPITALIZADO"/>
+                            <ComboBoxItem Content="REBAJADO"/>
+                            <ComboBoxItem Content="FRANQUICIA"/>
+                            <ComboBoxItem Content="GUARDIA"/>
+                            <ComboBoxItem Content="ARRESTO"/>
+                        </ComboBox>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <!-- Tabla de Personal -->
+            <Border Grid.Row="2" CornerRadius="12" Background="White" ClipToBounds="True">
+                <Border.Effect><DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.08" Color="Black"/></Border.Effect>
+                <DataGrid x:Name="dgPersonal" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
+                          Background="White" RowHeight="60" AlternatingRowBackground="#F8FAFC"
+                          HeadersVisibility="Column" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9" BorderThickness="0">
+                    <DataGrid.Resources>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Background" Value="#F1F5F9"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                            <Setter Property="Foreground" Value="#475569"/>
+                            <Setter Property="Padding" Value="15,15"/>
+                        </Style>
+                        <!-- Estilo para centrar verticalmente el contenido de las celdas -->
+                        <Style TargetType="DataGridCell">
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="DataGridCell">
+                                        <Border Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}">
+                                            <ContentPresenter VerticalAlignment="Center"/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </DataGrid.Resources>
+                    <DataGrid.Columns>
+                        
+                        <!-- NUEVO: COLUMNA DE FOTOGRAFÍA -->
+                        <DataGridTemplateColumn Header="Foto" Width="70">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border Width="40" Height="40" CornerRadius="20" Background="#E2E8F0" BorderBrush="#CBD5E1" BorderThickness="1" ClipToBounds="True" HorizontalAlignment="Center">
+                                        <Image Source="{Binding Foto}" Stretch="UniformToFill"/>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <DataGridTextColumn Header="Matrícula" Binding="{Binding Matricula}" Width="100" FontWeight="Bold"/>
+                        <DataGridTextColumn Header="Grado" Binding="{Binding Grado}" Width="110"/>
+                        <DataGridTextColumn Header="Nombres" Binding="{Binding Nombre}" Width="150"/>
+                        <DataGridTextColumn Header="Apellidos" Binding="{Binding Apellidos}" Width="150"/>
+                        
+                        <DataGridTemplateColumn Header="Estatus" Width="90">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border Background="#F1F5F9" CornerRadius="4" Padding="5,2" HorizontalAlignment="Left">
+                                        <TextBlock Text="{Binding Estatus}" FontWeight="Bold" FontSize="11" Foreground="#475569"/>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <DataGridTextColumn Header="Situación/Novedad" Binding="{Binding Novedad}" Width="140" FontWeight="Bold"/>
+
+                        <!-- ACCIONES OPERATIVAS -->
+                        <DataGridTemplateColumn Header="Acciones" Width="*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                        <Button ToolTip="Ver Kardex" Background="#E2E8F0" Foreground="#1E293B" Width="36" Height="36" Margin="4,0" Click="BtnVerPerfil_Click" CommandParameter="{Binding Matricula}">
+                                            <TextBlock Text="👁️" FontSize="16" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                            <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="18"/></Style></Button.Resources>
+                                        </Button>
+                                        <Button ToolTip="Asignar Novedad" Background="#E0F2FE" Foreground="#0284C7" Width="36" Height="36" Margin="4,0" Click="BtnNovedad_Click" CommandParameter="{Binding Matricula}">
+                                            <TextBlock Text="📌" FontSize="16" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                            <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="18"/></Style></Button.Resources>
+                                        </Button>
+                                        <Button ToolTip="Nota / Justificación" Background="#FEF3C7" Foreground="#D97706" Width="36" Height="36" Margin="4,0" Click="BtnIncidencia_Click" CommandParameter="{Binding Matricula}">
+                                            <TextBlock Text="📝" FontSize="16" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                            <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="18"/></Style></Button.Resources>
+                                        </Button>
+                                        
+                                        <!-- Control de permisos visuales -->
+                                        <Button ToolTip="Editar" Visibility="{Binding DataContext.VisibilidadAdmin, RelativeSource={RelativeSource AncestorType=UserControl}}" Background="#DBEAFE" Foreground="#1E3A8A" Width="36" Height="36" Margin="4,0" Click="BtnEditarRegistro_Click" CommandParameter="{Binding Matricula}">
+                                            <TextBlock Text="✏️" FontSize="14" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                            <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="18"/></Style></Button.Resources>
+                                        </Button>
+                                        <Button ToolTip="Eliminar" Visibility="{Binding DataContext.VisibilidadAdmin, RelativeSource={RelativeSource AncestorType=UserControl}}" Background="#FEE2E2" Foreground="#DC2626" Width="36" Height="36" Margin="4,0" Click="BtnEliminarRegistro_Click" CommandParameter="{Binding Matricula}">
+                                            <TextBlock Text="🗑️" FontSize="16" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                            <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="18"/></Style></Button.Resources>
+                                        </Button>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+        </Grid>
+
+        <!-- CAPA FLOTANTE: ASIGNAR NOVEDAD -->
+        <Grid x:Name="PanelNovedades" Visibility="Collapsed" Background="#CC0F172A" Panel.ZIndex="100">
+            <Border Background="White" Width="450" Height="400" CornerRadius="20" VerticalAlignment="Center" HorizontalAlignment="Center" Padding="40">
+                <Border.Effect><DropShadowEffect BlurRadius="40" ShadowDepth="10" Opacity="0.3" Color="Black"/></Border.Effect>
+                <StackPanel>
+                    <TextBlock Text="📋 ASIGNAR NOVEDAD" FontSize="24" FontWeight="Black" Foreground="#0F172A" HorizontalAlignment="Center" Margin="0,0,0,25"/>
+                    <TextBlock Text="Matrícula Seleccionada:" Foreground="#64748B" FontSize="13" FontWeight="Bold"/>
+                    <TextBlock x:Name="txtMatriculaNovedad" Text="-" FontSize="22" FontWeight="Black" Foreground="#3B82F6" Margin="0,0,0,20"/>
+                    
+                    <TextBlock Text="Estado General (Alta/Baja):" Foreground="#64748B" FontSize="13" FontWeight="Bold"/>
+                    <Border BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="8" Background="White" Margin="0,5,0,20">
+                        <ComboBox x:Name="cmbEstatus" FontSize="15" Height="40" Padding="10,0" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center">
+                            <ComboBoxItem Content="ACTIVO" Tag="ACTIVO"/>
+                            <ComboBoxItem Content="BAJA" Tag="BAJA"/>
+                        </ComboBox>
+                    </Border>
+                    
+                    <TextBlock Text="Novedad del Elemento:" Foreground="#64748B" FontSize="13" FontWeight="Bold"/>
+                    <Border BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="8" Background="White" Margin="0,5,0,35">
+                        <ComboBox x:Name="cmbNovedad" FontSize="15" Height="40" Padding="10,0" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center">
+                            <ComboBoxItem Content="PRESENTE" Tag="PRESENTE"/>
+                            <ComboBoxItem Content="FALTISTA" Tag="FALTISTA"/>
+                            <ComboBoxItem Content="VACACIONES" Tag="VACACIONES"/>
+                            <ComboBoxItem Content="PERMISO" Tag="PERMISO"/>
+                            <ComboBoxItem Content="COMISION" Tag="COMISION"/>
+                            <ComboBoxItem Content="HOSPITALIZADO" Tag="HOSPITALIZADO"/>
+                            <ComboBoxItem Content="REBAJADO" Tag="REBAJADO"/>
+                            <ComboBoxItem Content="FRANQUICIA" Tag="FRANQUICIA"/>
+                            <ComboBoxItem Content="GUARDIA" Tag="GUARDIA"/>
+                            <ComboBoxItem Content="ARRESTO" Tag="ARRESTO"/>
+                        </ComboBox>
+                    </Border>
+                    
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <Button Content="APLICAR CAMBIOS" Background="#10B981" Foreground="White" FontWeight="Bold" FontSize="14" Padding="25,12" Height="45" Margin="0,0,15,0" Click="BtnGuardarNovedad_Click">
+                            <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="8"/></Style></Button.Resources>
+                        </Button>
+                        <Button Content="CANCELAR" Background="#EF4444" Foreground="White" FontWeight="Bold" FontSize="14" Padding="25,12" Height="45" Click="BtnCancelarNovedad_Click">
+                            <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="8"/></Style></Button.Resources>
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+        
+        <!-- CAPA FLOTANTE: AGREGAR INCIDENCIA/NOTA MANUAL -->
+        <Grid x:Name="PanelIncidencia" Visibility="Collapsed" Background="#CC0F172A" Panel.ZIndex="100">
+            <Border Background="White" Width="500" Height="320" CornerRadius="16" VerticalAlignment="Center" HorizontalAlignment="Center" Padding="35">
+                <Border.Effect><DropShadowEffect BlurRadius="40" ShadowDepth="10" Opacity="0.3" Color="Black"/></Border.Effect>
+                <StackPanel>
+                    <TextBlock Text="📝 NOTA PARA EL EXPEDIENTE" FontSize="22" FontWeight="Black" Foreground="#0F172A" HorizontalAlignment="Center" Margin="0,0,0,15"/>
+                    <TextBlock x:Name="txtElementoIncidencia" Text="Matrícula: ---" FontSize="14" FontWeight="Bold" Foreground="#3B82F6" Margin="0,0,0,15"/>
+                    
+                    <TextBlock Text="Escriba la justificación o reporte (Ej. Olvidó gafete, Falló sensor):" Foreground="#64748B" FontSize="13" FontWeight="Bold" Margin="0,0,0,5"/>
+                    <Border BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="8" Background="#F8FAFC" Margin="0,0,0,25">
+                        <TextBox x:Name="txtNotaIncidencia" Height="80" TextWrapping="Wrap" AcceptsReturn="True" Padding="10" Background="Transparent" BorderThickness="0"/>
+                    </Border>
+                    
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <Button Content="GUARDAR EN EXPEDIENTE" Background="#F59E0B" Foreground="White" FontWeight="Bold" FontSize="14" Padding="20,12" Height="45" Margin="0,0,15,0" Click="BtnGuardarIncidencia_Click">
+                            <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="8"/></Style></Button.Resources>
+                        </Button>
+                        <Button Content="CANCELAR" Background="#94A3B8" Foreground="White" FontWeight="Bold" FontSize="14" Padding="20,12" Height="45" Click="BtnCancelarIncidencia_Click">
+                            <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="8"/></Style></Button.Resources>
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+    </Grid>
+</UserControl>
