@@ -45,10 +45,13 @@ namespace prueba1
             {
                 using (SQLiteConnection conexion = ConexionDB.ObtenerConexion())
                 {
-                    // Agregamos FotoPerfil a la consulta
-                    string query = "SELECT Matricula, IdGrado, Nombres AS Nombre, Apellidos, IdJefatura, Novedad, Estatus, FotoPerfil FROM Personal_Naval WHERE 1=1 ";
-
-                    if (txtBuscarPersonal != null && !string.IsNullOrWhiteSpace(txtBuscarPersonal.Text))
+                   string query = @"
+                        SELECT p.Matricula, p.IdGrado, p.Nombres AS Nombre, p.Apellidos, p.IdJefatura, p.Novedad, p.Estatus, p.FotoPerfil,
+                            g.NombreGrado AS Grado
+                        FROM Personal_Naval p 
+                        LEFT JOIN Cat_Grados g ON p.IdGrado = g.IdGrado
+                        WHERE 1=1 ";
+                        if (txtBuscarPersonal != null && !string.IsNullOrWhiteSpace(txtBuscarPersonal.Text))
                         query += " AND (Matricula LIKE @busqueda OR Nombres LIKE @busqueda OR Apellidos LIKE @busqueda) ";
 
                     if (cmbFiltroNovedad != null && cmbFiltroNovedad.SelectedItem is ComboBoxItem item && item.Content.ToString() != "TODOS")
@@ -80,8 +83,7 @@ namespace prueba1
                         {
                             DataRow row = dt.NewRow();
                             row["Matricula"] = reader["Matricula"].ToString();
-                            row["Grado"] = ObtenerNombreGrado(Convert.ToInt32(reader["IdGrado"]));
-                            row["Nombre"] = reader["Nombre"].ToString();
+                            row["Grado"] = reader["Grado"] != DBNull.Value ? reader["Grado"].ToString() : "DESCONOCIDO"; row["Nombre"] = reader["Nombre"].ToString();
                             row["Apellidos"] = reader["Apellidos"].ToString();
                             row["Estatus"] = reader["Estatus"].ToString();
                             row["Novedad"] = reader["Novedad"].ToString();
@@ -254,12 +256,7 @@ namespace prueba1
         // --- FUNCIONES AUXILIARES ---
         // =========================================================
 
-        private string ObtenerNombreGrado(int id)
-        {
-            string[] grados = { "Otro", "Marinero", "Cabo", "Tercer Maestre", "Segundo Maestre", "Primer Maestre", "TTE. Corbeta", "TTE. Fragata", "TTE. Navío", "CAP. Corbeta", "CAP. Fragata", "CAP. Navío", "Contralmirante", "Vicealmirante", "Almirante" };
-            if (id >= 1 && id <= grados.Length) return grados[id - 1];
-            return "DESCONOCIDO";
-        }
+        
 
         private BitmapImage ConvertirBytesAImagen(byte[] imageData)
         {

@@ -14,44 +14,58 @@ namespace prueba1
             InitializeComponent();
         }
 
-        private void Login_Click(object sender, RoutedEventArgs e)
+       private void Login_Click(object sender, RoutedEventArgs e)
+{
+    string usuario = txtUser.Text.Trim();
+    string password = txtPass.Password;
+
+    if (string.IsNullOrEmpty(usuario) || string.IsNullOrEmpty(password))
+    {
+        MessageBox.Show("Por favor ingresa usuario y contraseña.");
+        return;
+    }
+
+    try
+    {
+        using (SQLiteConnection conexion = ConexionDB.ObtenerConexion())
         {
-            string usuario = txtUser.Text;
-            string password = txtPass.Password;
+            // OJO: Ahora pedimos el PasswordHash y el Rol, no solo validamos directo
+            string query = "SELECT PasswordHash, Rol FROM Usuarios_Sistema WHERE Username=@user";
+            SQLiteCommand cmd = new SQLiteCommand(query, conexion);
+            cmd.Parameters.AddWithValue("@user", usuario);
 
-            if (string.IsNullOrEmpty(usuario) || string.IsNullOrEmpty(password))
+            using (SQLiteDataReader reader = cmd.ExecuteReader())
             {
-                MessageBox.Show("Por favor ingresa usuario y contraseña.");
-                return;
-            }
-
-            try
-            {
-                using (SQLiteConnection conexion = ConexionDB.ObtenerConexion())
+                if (reader.Read()) // Si encontró al usuario
                 {
-                    string query = "SELECT Rol FROM Usuarios_Sistema WHERE Username=@user AND PasswordHash=@pass";
-                    SQLiteCommand cmd = new SQLiteCommand(query, conexion);
-                    cmd.Parameters.AddWithValue("@user", usuario);
-                    cmd.Parameters.AddWithValue("@pass", password);
+                    string hashGuardado = reader["PasswordHash"].ToString();
+                    string rolGuardado = reader["Rol"].ToString();
 
-                    object resultado = cmd.ExecuteScalar();
+                    // BCrypt se encarga de verificar si la contraseña coincide con el Hash
+                    bool esValida = BCrypt.Net.BCrypt.Verify(password, hashGuardado);
 
-                    if (resultado != null)
+                    if (esValida)
                     {
-                        RolUsuario = resultado.ToString();
+                        RolUsuario = rolGuardado;
                         this.DialogResult = true; 
                     }
                     else
                     {
-                        MessageBox.Show("Usuario o contraseña incorrectos.");
+                        MessageBox.Show("Contraseña incorrecta.", "Error de acceso", MessageBoxButton.OK, MessageBoxImage.Warning);
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error: " + ex.Message);
+                else
+                {
+                    MessageBox.Show("Usuario no encontrado.", "Error de acceso", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
             }
         }
+    }
+    catch (Exception ex)
+    {
+        MessageBox.Show("Error: " + ex.Message);
+    }
+}
 
         private void Cancel_Click(object sender, RoutedEventArgs e)
         {

@@ -43,6 +43,8 @@
                 <Button Content="📁 Directorio" Background="#3B82F6" Foreground="White" FontWeight="Bold" FontSize="14" Padding="15" Margin="0,5" Click="BtnDirectorio_Click"/>
                 <Button Content="☑️ Novedades Masivas" Background="#0EA5E9" Foreground="White" FontWeight="Bold" FontSize="14" Padding="15" Margin="0,5" Click="BtnNovedadesMasivas_Click"/>
                 <Button Content="📊 Reportes y Cortes" Background="#F59E0B" Foreground="White" FontWeight="Bold" FontSize="14" Padding="15" Margin="0,5" Click="BtnReportes_Click"/>
+                <Button Content="🌿 Gestionar Organigrama" Background="#0EA5E9" Foreground="White" FontWeight="Bold" FontSize="14" Padding="15" Margin="0,5" Click="BtnOrganigrama_Click"/>
+                <Button Content="🎖️ Títulos y Grados" Background="#6366F1" Foreground="White" FontWeight="Bold" FontSize="14" Padding="15" Margin="0,5" Click="BtnGrados_Click"/>
                 <Button x:Name="BtnUsuarios" Content="🔑 Accesos al Sistema" Background="#8B5CF6" Foreground="White" FontWeight="Bold" FontSize="14" Padding="15" Margin="0,5" Click="BtnUsuarios_Click"/>
                 <Button x:Name="BtnSistema" Content="⚙️ Sistema y Respaldo" Background="#475569" Foreground="White" FontWeight="Bold" FontSize="14" Padding="15" Margin="0,5" Click="BtnSistema_Click"/>
 

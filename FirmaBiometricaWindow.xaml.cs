@@ -75,8 +75,12 @@ namespace prueba1
             {
                 using (SQLiteConnection conexion = ConexionDB.ObtenerConexion())
                 {
-                    // 💡 SOLUCIÓN: Buscamos en las 3 columnas de huellas
-                    string query = "SELECT Nombres, Apellidos, IdGrado, Huella, Huella2, Huella3 FROM Personal_Naval WHERE Estatus = 'ACTIVO'";
+                    string query = @"
+                    SELECT p.Nombres, p.Apellidos, p.IdGrado, p.Huella, p.Huella2, p.Huella3,
+                        g.NombreGrado AS Grado
+                    FROM Personal_Naval p
+                    LEFT JOIN Cat_Grados g ON p.IdGrado = g.IdGrado
+                    WHERE p.Estatus = 'ACTIVO'";
                     using (SQLiteCommand cmd = new SQLiteCommand(query, conexion))
                     using (SQLiteDataReader reader = cmd.ExecuteReader())
                     {
@@ -86,9 +90,9 @@ namespace prueba1
                             bool match2 = CompararHuellaFirma(featuresCapturadas, reader["Huella2"]);
                             bool match3 = CompararHuellaFirma(featuresCapturadas, reader["Huella3"]);
 
-                            if (match1 || match2 || match3)
+                           if (match1 || match2 || match3)
                             {
-                                string grado = ObtenerNombreGrado(Convert.ToInt32(reader["IdGrado"]));
+                                string grado = reader["Grado"] != DBNull.Value ? reader["Grado"].ToString() : "DESCONOCIDO";
                                 NombreFirmante = $"{grado} {reader["Nombres"]} {reader["Apellidos"]}";
                                 FirmaExitosa = true;
 
@@ -116,11 +120,6 @@ namespace prueba1
         public void OnReaderDisconnect(object Capture, string ReaderSerialNumber) { }
         public void OnSampleQuality(object Capture, string ReaderSerialNumber, DPFP.Capture.CaptureFeedback CaptureFeedback) { }
         
-        private string ObtenerNombreGrado(int id)
-        {
-            string[] grados = { "Otro", "Marinero", "Cabo", "Tercer Maestre", "Segundo Maestre", "Primer Maestre", "TTE. Corbeta", "TTE. Fragata", "TTE. Navío", "CAP. Corbeta", "CAP. Fragata", "CAP. Navío", "Contralmirante", "Vicealmirante", "Almirante" };
-            if (id >= 1 && id <= grados.Length) return grados[id - 1];
-            return "DESCONOCIDO";
-        }
+        
     }
 }

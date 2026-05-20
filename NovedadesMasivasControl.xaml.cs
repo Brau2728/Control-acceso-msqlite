@@ -18,6 +18,7 @@ namespace prueba1
             dpMasivoInicio.SelectedDate = DateTime.Now;
             dpMasivoFin.SelectedDate = DateTime.Now.AddDays(1);
             
+            CargarFiltrosArea();
             CargarPersonalMasivo();
         }
 
@@ -41,13 +42,13 @@ namespace prueba1
                 {
                     // 💡 MAGIA: ORDER BY Estatus ASC asegura que los 'ACTIVO' van primero, y 'BAJA' hasta abajo.
                     string query = @"
-                        SELECT Matricula, Nombres || ' ' || Apellidos AS Nombre, 
-                               Novedad AS NovedadTipo, Estatus AS EstatusActual,
-                               FechaInicioNovedad, FechaFinNovedad, DetalleNovedad,
-                               (SELECT CASE IdJefatura WHEN 2 THEN 'Talleres' WHEN 3 THEN 'Servicios' WHEN 4 THEN 'Detall' WHEN 5 THEN 'Comunav' ELSE 'Otro' END) AS Area
-                        FROM Personal_Naval 
-                        ORDER BY Estatus ASC, IdJefatura, IdGrado";
-                        
+                    SELECT p.Matricula, p.Nombres || ' ' || p.Apellidos AS Nombre, 
+                        p.Novedad AS NovedadTipo, p.Estatus AS EstatusActual,
+                        p.FechaInicioNovedad, p.FechaFinNovedad, p.DetalleNovedad,
+                        IFNULL(j.NombreJefatura, 'DESCONOCIDA') AS Area
+                    FROM Personal_Naval p
+                    LEFT JOIN Cat_Jefaturas j ON p.IdJefatura = j.IdJefatura
+                    ORDER BY p.Estatus ASC, p.IdJefatura, p.IdGrado";  
                     SQLiteDataAdapter adaptador = new SQLiteDataAdapter(new SQLiteCommand(query, conexion));
                     dtPersonalMasivo = new DataTable();
                     adaptador.Fill(dtPersonalMasivo);
@@ -71,6 +72,37 @@ namespace prueba1
                 }
             }
             catch (Exception ex) { MessageBox.Show("Error al cargar personal masivo: " + ex.Message); }
+        }
+
+        private void CargarFiltrosArea()
+        {
+            // Quitamos temporalmente el evento para que no marque errores al cargar
+            cmbFiltroArea.SelectionChanged -= CmbFiltroArea_SelectionChanged;
+
+            cmbFiltroArea.Items.Clear();
+            cmbFiltroArea.Items.Add(new ComboBoxItem { Content = "TODAS LAS ÁREAS" });
+
+            try
+            {
+                using (SQLiteConnection conexion = ConexionDB.ObtenerConexion())
+                {
+                    string query = "SELECT NombreJefatura FROM Cat_Jefaturas ORDER BY NombreJefatura ASC";
+                    using (SQLiteCommand cmd = new SQLiteCommand(query, conexion))
+                    using (SQLiteDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            cmbFiltroArea.Items.Add(new ComboBoxItem { Content = reader["NombreJefatura"].ToString() });
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            cmbFiltroArea.SelectedIndex = 0;
+            
+            // Regresamos el evento a la normalidad
+            cmbFiltroArea.SelectionChanged += CmbFiltroArea_SelectionChanged;
         }
 
         private void CalcularDatosInteligentes(DataRow row)
@@ -196,7 +228,7 @@ namespace prueba1
         private void ChkMasivoIndefinido_Checked(object sender, RoutedEventArgs e) { if (panelFechaFin != null) panelFechaFin.Visibility = Visibility.Collapsed; }
         private void ChkMasivoIndefinido_Unchecked(object sender, RoutedEventArgs e) { if (panelFechaFin != null) panelFechaFin.Visibility = Visibility.Visible; }
 
-        private void BtnAplicarMasivo_Click(object sender, RoutedEventArgs e)
+       private void BtnAplicarMasivo_Click(object sender, RoutedEventArgs e)
         {
             DataView vista = (DataView)dgMasivo.ItemsSource;
             int actualizados = 0;
@@ -219,49 +251,64 @@ namespace prueba1
             {
                 using (SQLiteConnection conexion = ConexionDB.ObtenerConexion())
                 {
-                    foreach (DataRowView fila in vista)
+                    // 🚀 MEJORA DE RENDIMIENTO: Iniciamos una transacción maestra
+                    using (SQLiteTransaction transaccion = conexion.BeginTransaction())
                     {
-                        if (Convert.ToBoolean(fila["Seleccionado"]) == true)
+                        foreach (DataRowView fila in vista)
                         {
-                            string matricula = fila["Matricula"].ToString();
-                            string query = "";
-
-                            if (tipoAccion == "ESTATUS")
+                            if (Convert.ToBoolean(fila["Seleccionado"]) == true)
                             {
-                                string nuevoEstatus = ((ComboBoxItem)cmbMasivoEstatus.SelectedItem).Tag.ToString();
-                                query = $"UPDATE Personal_Naval SET Estatus = '{nuevoEstatus}' WHERE Matricula = '{matricula}'";
-                            }
-                            else if (tipoAccion == "NOVEDAD")
-                            {
-                                string nuevaNovedad = ((ComboBoxItem)cmbMasivoNovedad.SelectedItem).Tag.ToString();
-                                string detalle = txtMasivoDetalle.Text.Trim();
-                                
-                                query = $"UPDATE Personal_Naval SET Novedad = '{nuevaNovedad}'";
-                                
-                                if (nuevaNovedad != "PRESENTE")
-                                {
-                                    string fechaIni = dpMasivoInicio.SelectedDate.HasValue ? $"'{dpMasivoInicio.SelectedDate.Value.ToString("yyyy-MM-dd")}'" : "NULL";
-                                    string fechaFin = (chkMasivoIndefinido.IsChecked == true || !dpMasivoFin.SelectedDate.HasValue) 
-                                                        ? "NULL" : $"'{dpMasivoFin.SelectedDate.Value.ToString("yyyy-MM-dd")}'";
-                                    string paramDetalle = string.IsNullOrEmpty(detalle) ? "NULL" : $"'{detalle}'";
+                                string matricula = fila["Matricula"].ToString();
 
-                                    query += $", FechaInicioNovedad = {fechaIni}, FechaFinNovedad = {fechaFin}, DetalleNovedad = {paramDetalle}";
-                                }
-                                else
+                                // 🛡️ MEJORA DE SEGURIDAD: Uso estricto de parámetros
+                                using (SQLiteCommand cmd = new SQLiteCommand(conexion))
                                 {
-                                    query += ", FechaInicioNovedad = NULL, FechaFinNovedad = NULL, DetalleNovedad = NULL";
-                                }
+                                    if (tipoAccion == "ESTATUS")
+                                    {
+                                        string nuevoEstatus = ((ComboBoxItem)cmbMasivoEstatus.SelectedItem).Tag.ToString();
+                                        cmd.CommandText = "UPDATE Personal_Naval SET Estatus = @estatus WHERE Matricula = @mat";
+                                        cmd.Parameters.AddWithValue("@estatus", nuevoEstatus);
+                                        cmd.Parameters.AddWithValue("@mat", matricula);
+                                    }
+                                    else if (tipoAccion == "NOVEDAD")
+                                    {
+                                        string nuevaNovedad = ((ComboBoxItem)cmbMasivoNovedad.SelectedItem).Tag.ToString();
+                                        string detalle = txtMasivoDetalle.Text.Trim();
+                                        
+                                        if (nuevaNovedad != "PRESENTE")
+                                        {
+                                            cmd.CommandText = "UPDATE Personal_Naval SET Novedad = @novedad, FechaInicioNovedad = @fIni, FechaFinNovedad = @fFin, DetalleNovedad = @detalle WHERE Matricula = @mat";
+                                            
+                                            // Manejo inteligente de Fechas Nulas
+                                            cmd.Parameters.AddWithValue("@fIni", dpMasivoInicio.SelectedDate.HasValue ? dpMasivoInicio.SelectedDate.Value.ToString("yyyy-MM-dd") : DBNull.Value);
+                                            
+                                            // Si es indefinido o no hay fecha fin, mandamos NULL
+                                            cmd.Parameters.AddWithValue("@fFin", (chkMasivoIndefinido.IsChecked == false && dpMasivoFin.SelectedDate.HasValue) ? dpMasivoFin.SelectedDate.Value.ToString("yyyy-MM-dd") : DBNull.Value);
+                                            
+                                            cmd.Parameters.AddWithValue("@detalle", string.IsNullOrEmpty(detalle) ? DBNull.Value : detalle);
+                                        }
+                                        else
+                                        {
+                                            // Si regresa a presente, limpiamos el historial de esa novedad
+                                            cmd.CommandText = "UPDATE Personal_Naval SET Novedad = @novedad, FechaInicioNovedad = NULL, FechaFinNovedad = NULL, DetalleNovedad = NULL WHERE Matricula = @mat";
+                                        }
 
-                                query += $" WHERE Matricula = '{matricula}'";
+                                        cmd.Parameters.AddWithValue("@novedad", nuevaNovedad);
+                                        cmd.Parameters.AddWithValue("@mat", matricula);
+                                    }
+                                    
+                                    cmd.ExecuteNonQuery();
+                                    actualizados++;
+                                }
                             }
-                            
-                            new SQLiteCommand(query, conexion).ExecuteNonQuery();
-                            actualizados++;
                         }
+
+                        // 🚀 AQUÍ OCURRE LA MAGIA: Guardamos todos los cambios en el disco de un solo golpe
+                        transaccion.Commit();
                     }
                 }
 
-                MessageBox.Show($"¡Operación exitosa!\n\nSe actualizó la situación de {actualizados} elementos.", "Novedades Masivas", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show($"¡Operación exitosa!\n\nSe actualizó la situación de {actualizados} elementos en tiempo récord.", "Novedades Masivas", MessageBoxButton.OK, MessageBoxImage.Information);
                 CargarPersonalMasivo(); 
             }
             catch (Exception ex) 

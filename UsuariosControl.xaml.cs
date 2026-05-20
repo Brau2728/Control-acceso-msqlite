@@ -57,7 +57,8 @@ namespace prueba1
 
                         cmd.CommandText = "INSERT INTO Usuarios_Sistema (Username, PasswordHash, Rol) VALUES (@user, @pass, @rol)";
                         cmd.Parameters.AddWithValue("@user", txtUserName.Text.Trim());
-                        cmd.Parameters.AddWithValue("@pass", txtUserPass.Password); 
+                        string hashContrasena = BCrypt.Net.BCrypt.HashPassword(txtUserPass.Password);
+                        cmd.Parameters.AddWithValue("@pass", hashContrasena);
                         cmd.Parameters.AddWithValue("@rol", ((ComboBoxItem)cmbUserRol.SelectedItem).Content.ToString());
                     }
                     else
@@ -69,7 +70,8 @@ namespace prueba1
                         else
                         {
                             cmd.CommandText = "UPDATE Usuarios_Sistema SET Username=@user, PasswordHash=@pass, Rol=@rol WHERE Id=@id";
-                            cmd.Parameters.AddWithValue("@pass", txtUserPass.Password);
+                            string hashContrasenaEdicion = BCrypt.Net.BCrypt.HashPassword(txtUserPass.Password);
+                            cmd.Parameters.AddWithValue("@pass", hashContrasenaEdicion);
                         }
                         cmd.Parameters.AddWithValue("@user", txtUserName.Text.Trim());
                         cmd.Parameters.AddWithValue("@rol", ((ComboBoxItem)cmbUserRol.SelectedItem).Content.ToString());

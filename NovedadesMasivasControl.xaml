@@ -31,13 +31,8 @@
                             </Border>
                             
                             <TextBlock Text="Filtrar Área:" VerticalAlignment="Center" FontWeight="Bold" Foreground="#475569" Margin="20,0,10,0"/>
-                            <Border BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="6" Background="White">
+                           <Border BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="6" Background="White">
                                 <ComboBox x:Name="cmbFiltroArea" Width="150" Height="36" Padding="10,0" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center" SelectionChanged="CmbFiltroArea_SelectionChanged">
-                                    <ComboBoxItem Content="TODAS LAS ÁREAS" IsSelected="True"/>
-                                    <ComboBoxItem Content="Talleres"/>
-                                    <ComboBoxItem Content="Servicios"/>
-                                    <ComboBoxItem Content="Detall"/>
-                                    <ComboBoxItem Content="Comunav"/>
                                 </ComboBox>
                             </Border>
                         </StackPanel>

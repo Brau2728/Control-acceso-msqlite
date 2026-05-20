@@ -63,37 +63,21 @@
                 </Grid.ColumnDefinitions>
                 
                 <StackPanel Grid.Column="0">
-                    <TextBlock Text="Grado:" FontWeight="Bold" Foreground="#475569" Margin="0,0,0,5"/>
-                    <Border BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="6" Background="White">
-                        <ComboBox x:Name="cmbGrado" Height="36" IsEditable="False" FontSize="14" BorderThickness="0" Background="Transparent" Padding="5,0">
-                            <ComboBoxItem Content="Otro" Tag="1"/>
-                            <ComboBoxItem Content="Marinero" Tag="2"/>
-                            <ComboBoxItem Content="Cabo" Tag="3"/>
-                            <ComboBoxItem Content="Tercer Maestre" Tag="4"/>
-                            <ComboBoxItem Content="Segundo Maestre" Tag="5"/>
-                            <ComboBoxItem Content="Primer Maestre" Tag="6"/>
-                            <ComboBoxItem Content="Teniente de Corbeta" Tag="7"/>
-                            <ComboBoxItem Content="Teniente de Fragata" Tag="8"/>
-                            <ComboBoxItem Content="Teniente de Navío" Tag="9"/>
-                            <ComboBoxItem Content="Capitán de Corbeta" Tag="10"/>
-                            <ComboBoxItem Content="Capitán de Fragata" Tag="11"/>
-                            <ComboBoxItem Content="Capitán de Navío" Tag="12"/>
-                            <ComboBoxItem Content="Contralmirante" Tag="13"/>
-                            <ComboBoxItem Content="Vicealmirante" Tag="14"/>
-                            <ComboBoxItem Content="Almirante" Tag="15"/>
+                <TextBlock Text="Grado:" FontWeight="Bold" Foreground="#475569" Margin="0,0,0,5"/>
+                <Border BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="6" Background="White">
+                    <ComboBox x:Name="cmbGrado" Height="36" IsEditable="False" FontSize="14" BorderThickness="0" Background="Transparent" Padding="5,0"
+                            DisplayMemberPath="NombreGrado" 
+                            SelectedValuePath="IdGrado">
                         </ComboBox>
-                    </Border>
+                </Border>
                 </StackPanel>
 
-                <StackPanel Grid.Column="2">
+                 <StackPanel Grid.Column="2">
                     <TextBlock Text="Jefatura / Adscripción:" FontWeight="Bold" Foreground="#475569" Margin="0,0,0,5"/>
                     <Border BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="6" Background="White">
-                        <ComboBox x:Name="cmbJefatura" Height="36" IsEditable="False" FontSize="14" BorderThickness="0" Background="Transparent" Padding="5,0">
-                            <ComboBoxItem Content="Otro" Tag="1"/>
-                            <ComboBoxItem Content="Talleres" Tag="2"/>
-                            <ComboBoxItem Content="Servicios" Tag="3"/>
-                            <ComboBoxItem Content="Detall" Tag="4"/>
-                            <ComboBoxItem Content="Comunav" Tag="5"/>
+                        <ComboBox x:Name="cmbJefatura" Height="36" IsEditable="False" FontSize="14" BorderThickness="0" Background="Transparent" Padding="5,0"
+                                DisplayMemberPath="NombreJefatura" 
+                                SelectedValuePath="IdJefatura">
                         </ComboBox>
                     </Border>
                 </StackPanel>

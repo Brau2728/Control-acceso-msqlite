@@ -1,0 +1,76 @@
+<UserControl x:Class="prueba1.GestionGradosControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="Transparent">
+    
+    <Grid Margin="0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Configuración de Grados y Títulos Civiles" FontSize="28" FontWeight="Black" Foreground="#0F172A" Margin="0,0,0,20"/>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="400"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Background="White" CornerRadius="16" Padding="25" Margin="0,0,30,0">
+                <Border.Effect><DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.08" Color="Black"/></Border.Effect>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" Text="🎖️ Catálogo Existente" FontSize="18" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,15"/>
+                    
+                    <DataGrid x:Name="dgGrados" Grid.Row="1" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" 
+                              Background="White" RowHeight="45" AlternatingRowBackground="#F8FAFC"
+                              HeadersVisibility="Column" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9" BorderThickness="0"
+                              SelectionChanged="DgGrados_SelectionChanged">
+                        <DataGrid.Resources>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="Background" Value="#F1F5F9"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                                <Setter Property="Padding" Value="15,10"/>
+                            </Style>
+                        </DataGrid.Resources>
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="ID" Binding="{Binding IdGrado}" Width="60"/>
+                            <DataGridTextColumn Header="Nombre del Grado / Título" Binding="{Binding NombreGrado}" Width="*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="1" Background="White" CornerRadius="16" Padding="30" VerticalAlignment="Top">
+                <Border.Effect><DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.08" Color="Black"/></Border.Effect>
+                <StackPanel>
+                    <TextBlock x:Name="lblTituloForm" Text="➕ Registrar Nuevo Título" FontSize="20" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,25"/>
+
+                    <TextBlock Text="Nombre (Ej. INGENIERO, CIVIL, CABO):" FontWeight="Bold" Foreground="#64748B" Margin="0,0,0,8"/>
+                    <Border BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="8" Background="White" Margin="0,0,0,25">
+                        <TextBox x:Name="txtNombreGrado" CharacterCasing="Upper" Height="40" Padding="10" Background="Transparent" BorderThickness="0" VerticalContentAlignment="Center"/>
+                    </Border>
+
+                    <StackPanel Orientation="Vertical">
+                        <Button Content="GUARDAR GRADO" Background="#10B981" Foreground="White" FontWeight="Bold" Height="45" Margin="0,0,0,10" Click="BtnGuardar_Click">
+                            <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="8"/></Style></Button.Resources>
+                        </Button>
+                        
+                        <Button x:Name="btnEliminar" Content="🗑️ ELIMINAR SELECCIÓN" Background="#EF4444" Foreground="White" FontWeight="Bold" Height="45" Margin="0,0,0,10" Visibility="Collapsed" Click="BtnEliminar_Click">
+                            <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="8"/></Style></Button.Resources>
+                        </Button>
+
+                        <Button Content="LIMPIAR / NUEVO" Background="#94A3B8" Foreground="White" FontWeight="Bold" Height="45" Click="BtnLimpiar_Click">
+                            <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="8"/></Style></Button.Resources>
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

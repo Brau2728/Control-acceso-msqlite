@@ -105,8 +105,13 @@ namespace prueba1
             {
                 using (SQLiteConnection conexion = ConexionDB.ObtenerConexion())
                 {
-                    string query = "SELECT Matricula, Nombres, Apellidos, IdGrado, IdJefatura, FotoPerfil, Huella, Huella2, Huella3, Estatus, Novedad FROM Personal_Naval";
-                    using (SQLiteCommand cmd = new SQLiteCommand(query, conexion))
+                    string query = @"
+                    SELECT p.Matricula, p.Nombres, p.Apellidos, p.IdGrado, p.IdJefatura, p.FotoPerfil, p.Huella, p.Huella2, p.Huella3, p.Estatus, p.Novedad, 
+                        j.NombreJefatura, g.NombreGrado 
+                    FROM Personal_Naval p
+                    LEFT JOIN Cat_Jefaturas j ON p.IdJefatura = j.IdJefatura
+                    LEFT JOIN Cat_Grados g ON p.IdGrado = g.IdGrado";
+                   using (SQLiteCommand cmd = new SQLiteCommand(query, conexion))
                     using (SQLiteDataReader reader = cmd.ExecuteReader())
                     {
                         while (reader.Read())
@@ -120,15 +125,15 @@ namespace prueba1
                             {
                                 accesoConcedido = true;
                                 marinoEncontrado = new Marino
-                                {
-                                    Matricula = reader["Matricula"].ToString(),
-                                    Nombre = reader["Nombres"].ToString(),
-                                    Apellidos = reader["Apellidos"].ToString(),
-                                    Grado = ObtenerNombreGrado(Convert.ToInt32(reader["IdGrado"])),
-                                    Jefatura = ObtenerNombreJefatura(Convert.ToInt32(reader["IdJefatura"])),
-                                    Estatus = reader["Estatus"].ToString(),
-                                    Novedad = reader["Novedad"].ToString()
-                                };
+                               {
+                                Matricula = reader["Matricula"].ToString(),
+                                Nombre = reader["Nombres"].ToString(),
+                                Apellidos = reader["Apellidos"].ToString(),
+                                Grado = reader["NombreGrado"] != DBNull.Value ? reader["NombreGrado"].ToString() : "DESCONOCIDO",
+                                Jefatura = reader["NombreJefatura"] != DBNull.Value ? reader["NombreJefatura"].ToString() : "DESCONOCIDA",
+                                Estatus = reader["Estatus"].ToString(),
+                                Novedad = reader["Novedad"].ToString()
+                               };
 
                                 if (reader["FotoPerfil"] != DBNull.Value)
                                 {
@@ -205,19 +210,9 @@ namespace prueba1
         #endregion
 
         #region Funciones Auxiliares e Interfaz
-        private string ObtenerNombreGrado(int id)
-        {
-            string[] grados = { "Otro", "Marinero", "Cabo", "Tercer Maestre", "Segundo Maestre", "Primer Maestre", "TTE. Corbeta", "TTE. Fragata", "TTE. Navío", "CAP. Corbeta", "CAP. Fragata", "CAP. Navío", "Contralmirante", "Vicealmirante", "Almirante" };
-            if (id >= 1 && id <= grados.Length) return grados[id - 1];
-            return "DESCONOCIDO";
-        }
+        
 
-        private string ObtenerNombreJefatura(int id)
-        {
-            string[] jefaturas = { "Otro", "Talleres", "Servicios", "Detall", "Comunav" };
-            if (id >= 1 && id <= jefaturas.Length) return jefaturas[id - 1];
-            return "DESCONOCIDA";
-        }
+       
 
         private BitmapImage ConvertirBytesAImagen(byte[] imageData)
         {

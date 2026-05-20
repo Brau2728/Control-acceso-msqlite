@@ -85,6 +85,10 @@ namespace prueba1
                 directorioActual.CargarDirectorio();
             }
         }
+        private void BtnGrados_Click(object sender, RoutedEventArgs e)
+        {
+            ContenedorPrincipal.Content = new GestionGradosControl();
+        }
 
         private void BtnDirectorio_Click(object sender, RoutedEventArgs e)
         {
@@ -108,6 +112,13 @@ namespace prueba1
         {
             // Inyecta el módulo de Usuarios
             ContenedorPrincipal.Content = new UsuariosControl();
+
+        }
+
+        private void BtnOrganigrama_Click(object sender, RoutedEventArgs e)
+        {
+            // Inyecta el módulo del organigrama dinámico
+            ContenedorPrincipal.Content = new GestionJefaturasControl();
         }
 
         private void BtnSistema_Click(object sender, RoutedEventArgs e)

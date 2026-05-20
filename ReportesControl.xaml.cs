@@ -52,27 +52,53 @@ namespace prueba1
 
         private void CargarBitacora()
         {
-            try
-            {
-                using (SQLiteConnection conexion = ConexionDB.ObtenerConexion())
-                {
-                    string query = @"SELECT r.FechaHora, r.Matricula, IFNULL(p.Nombres || ' ' || p.Apellidos, 'DESCONOCIDO') AS NombreCompleto, r.MensajeAcceso, r.NovedadMomento
-                                     FROM Registro_Accesos r LEFT JOIN Personal_Naval p ON r.Matricula = p.Matricula WHERE 1=1 ";
+           try
+{
+    using (SQLiteConnection conexion = ConexionDB.ObtenerConexion())
+    {
+        string query = @"SELECT r.FechaHora, r.Matricula, IFNULL(p.Nombres || ' ' || p.Apellidos, 'DESCONOCIDO') AS NombreCompleto, r.MensajeAcceso, r.NovedadMomento
+                         FROM Registro_Accesos r LEFT JOIN Personal_Naval p ON r.Matricula = p.Matricula WHERE 1=1 ";
 
-                    if (!string.IsNullOrWhiteSpace(txtFiltroMatricula.Text)) query += $" AND r.Matricula LIKE '%{txtFiltroMatricula.Text}%' ";
-                    if (dpFechaInicio.SelectedDate.HasValue) query += $" AND r.FechaHora >= '{dpFechaInicio.SelectedDate.Value.ToString("yyyy-MM-dd")} {txtHoraInicio.Text}:00' ";
-                    if (dpFechaFin.SelectedDate.HasValue) query += $" AND r.FechaHora <= '{dpFechaFin.SelectedDate.Value.ToString("yyyy-MM-dd")} {txtHoraFin.Text}:59' ";
-                    if (chkOcultarFallos.IsChecked == true) query += " AND r.MensajeAcceso NOT LIKE '%RECHAZADO%' AND r.MensajeAcceso NOT LIKE '%DENEGADO%' ";
-                    
-                    query += " ORDER BY r.FechaHora DESC";
+        // 1. Creamos el comando antes para irle agregando los parámetros
+        SQLiteCommand cmd = new SQLiteCommand();
+        cmd.Connection = conexion;
 
-                    SQLiteDataAdapter adaptador = new SQLiteDataAdapter(new SQLiteCommand(query, conexion));
-                    DataTable dt = new DataTable();
-                    adaptador.Fill(dt);
-                    dgBitacora.ItemsSource = dt.DefaultView;
-                }
-            }
-            catch (Exception ex) { MessageBox.Show("Error al cargar bitácora: " + ex.Message); }
+        // 2. Filtro de Matrícula Seguro
+        if (!string.IsNullOrWhiteSpace(txtFiltroMatricula.Text)) 
+        {
+            query += " AND r.Matricula LIKE @mat ";
+            cmd.Parameters.AddWithValue("@mat", "%" + txtFiltroMatricula.Text.Trim() + "%");
+        }
+
+        // 3. Filtro de Fechas Seguro
+        if (dpFechaInicio.SelectedDate.HasValue) 
+        {
+            query += " AND r.FechaHora >= @inicio ";
+            cmd.Parameters.AddWithValue("@inicio", $"{dpFechaInicio.SelectedDate.Value:yyyy-MM-dd} {txtHoraInicio.Text}:00");
+        }
+
+        if (dpFechaFin.SelectedDate.HasValue) 
+        {
+            query += " AND r.FechaHora <= @fin ";
+            cmd.Parameters.AddWithValue("@fin", $"{dpFechaFin.SelectedDate.Value:yyyy-MM-dd} {txtHoraFin.Text}:59");
+        }
+
+        if (chkOcultarFallos.IsChecked == true) 
+        {
+            query += " AND r.MensajeAcceso NOT LIKE '%RECHAZADO%' AND r.MensajeAcceso NOT LIKE '%DENEGADO%' ";
+        }
+        
+        query += " ORDER BY r.FechaHora DESC";
+
+        cmd.CommandText = query;
+
+        SQLiteDataAdapter adaptador = new SQLiteDataAdapter(cmd);
+        DataTable dt = new DataTable();
+        adaptador.Fill(dt);
+        dgBitacora.ItemsSource = dt.DefaultView;
+    }
+}
+catch (Exception ex) { MessageBox.Show("Error al cargar bitácora: " + ex.Message); }
             
             CargarTarjetasEnVivo();
         }
@@ -117,11 +143,13 @@ namespace prueba1
                 using (SQLiteConnection conexion = ConexionDB.ObtenerConexion())
                 {
                     string query = $@"
-                        SELECT p.Matricula, p.Nombres || ' ' || p.Apellidos AS NombreCompleto, p.IdJefatura, p.Novedad,
-                               (SELECT MIN(r.FechaHora) FROM Registro_Accesos r WHERE r.Matricula = p.Matricula AND r.FechaHora >= '{fecha} {horaInicio}:00' AND r.FechaHora <= '{fecha} {horaFin}:59') AS HoraEntrada,
-                               (SELECT MAX(r.MensajeAcceso) FROM Registro_Accesos r WHERE r.Matricula = p.Matricula AND r.FechaHora LIKE '{fecha}%' AND r.MensajeAcceso LIKE '%JUSTIFICADO%') AS TieneJustificacion
-                        FROM Personal_Naval p WHERE p.Estatus = 'ACTIVO' ORDER BY p.IdJefatura";
-
+                    SELECT p.Matricula, p.Nombres || ' ' || p.Apellidos AS NombreCompleto, p.IdJefatura, p.Novedad, j.NombreJefatura,
+                        (SELECT MIN(r.FechaHora) FROM Registro_Accesos r WHERE r.Matricula = p.Matricula AND r.FechaHora >= '{fecha} {horaInicio}:00' AND r.FechaHora <= '{fecha} {horaFin}:59') AS HoraEntrada,
+                        (SELECT MAX(r.MensajeAcceso) FROM Registro_Accesos r WHERE r.Matricula = p.Matricula AND r.FechaHora LIKE '{fecha}%' AND r.MensajeAcceso LIKE '%JUSTIFICADO%') AS TieneJustificacion
+                    FROM Personal_Naval p 
+                    LEFT JOIN Cat_Jefaturas j ON p.IdJefatura = j.IdJefatura
+                    WHERE p.Estatus = 'ACTIVO' ORDER BY p.IdJefatura";
+                    
                     SQLiteCommand cmd = new SQLiteCommand(query, conexion);
                     using (SQLiteDataReader reader = cmd.ExecuteReader())
                     {
@@ -142,8 +170,8 @@ namespace prueba1
                             DataRow row = dtAsistencia.NewRow();
                             row["Matricula"] = reader["Matricula"].ToString();
                             row["NombreCompleto"] = reader["NombreCompleto"].ToString();
-                            row["Jefatura"] = ObtenerNombreJefatura(Convert.ToInt32(reader["IdJefatura"]));
-                            
+                            row["Jefatura"] = reader["NombreJefatura"] != DBNull.Value ? reader["NombreJefatura"].ToString() : "DESCONOCIDA";
+
                             string novedadAct = reader["Novedad"].ToString();
                             string horaEntradaCompleta = reader["HoraEntrada"].ToString();
                             string justificacion = reader["TieneJustificacion"].ToString();
@@ -284,17 +312,18 @@ namespace prueba1
             {
                 using (SQLiteConnection conexion = ConexionDB.ObtenerConexion())
                 {
-                    string query = $@"
-                        SELECT 
-                            p.Matricula, 
-                            p.Nombres || ' ' || p.Apellidos AS Nombre, 
-                            p.IdJefatura,
-                            (SELECT COUNT(DISTINCT date(r1.FechaHora)) FROM Registro_Accesos r1 WHERE r1.Matricula = p.Matricula AND strftime('%m', r1.FechaHora) = '{mes}' AND strftime('%Y', r1.FechaHora) = '{anio}' AND time(r1.FechaHora) <= '{tolerancia}' AND r1.MensajeAcceso NOT LIKE '%JUSTIFICACIÓN%') AS Asistencias,
-                            (SELECT COUNT(DISTINCT date(r2.FechaHora)) FROM Registro_Accesos r2 WHERE r2.Matricula = p.Matricula AND strftime('%m', r2.FechaHora) = '{mes}' AND strftime('%Y', r2.FechaHora) = '{anio}' AND time(r2.FechaHora) > '{tolerancia}' AND r2.MensajeAcceso NOT LIKE '%JUSTIFICACIÓN%') AS Retardos,
-                            (SELECT COUNT(r3.IdRegistro) FROM Registro_Accesos r3 WHERE r3.Matricula = p.Matricula AND strftime('%m', r3.FechaHora) = '{mes}' AND strftime('%Y', r3.FechaHora) = '{anio}' AND r3.MensajeAcceso LIKE '%JUSTIFICACIÓN%') AS Justificados,
-                            p.Novedad
-                        FROM Personal_Naval p WHERE p.Estatus = 'ACTIVO'";
-
+                  string query = $@"
+                    SELECT 
+                        p.Matricula, 
+                        p.Nombres || ' ' || p.Apellidos AS Nombre, 
+                        p.IdJefatura, j.NombreJefatura,
+                        (SELECT COUNT(DISTINCT date(r1.FechaHora)) FROM Registro_Accesos r1 WHERE r1.Matricula = p.Matricula AND strftime('%m', r1.FechaHora) = '{mes}' AND strftime('%Y', r1.FechaHora) = '{anio}' AND time(r1.FechaHora) <= '{tolerancia}' AND r1.MensajeAcceso NOT LIKE '%JUSTIFICACIÓN%') AS Asistencias,
+                        (SELECT COUNT(DISTINCT date(r2.FechaHora)) FROM Registro_Accesos r2 WHERE r2.Matricula = p.Matricula AND strftime('%m', r2.FechaHora) = '{mes}' AND strftime('%Y', r2.FechaHora) = '{anio}' AND time(r2.FechaHora) > '{tolerancia}' AND r2.MensajeAcceso NOT LIKE '%JUSTIFICACIÓN%') AS Retardos,
+                        (SELECT COUNT(r3.IdRegistro) FROM Registro_Accesos r3 WHERE r3.Matricula = p.Matricula AND strftime('%m', r3.FechaHora) = '{mes}' AND strftime('%Y', r3.FechaHora) = '{anio}' AND r3.MensajeAcceso LIKE '%JUSTIFICACIÓN%') AS Justificados,
+                        p.Novedad
+                    FROM Personal_Naval p 
+                    LEFT JOIN Cat_Jefaturas j ON p.IdJefatura = j.IdJefatura
+                    WHERE p.Estatus = 'ACTIVO'";
                     SQLiteCommand cmd = new SQLiteCommand(query, conexion);
                     using (SQLiteDataReader reader = cmd.ExecuteReader())
                     {
@@ -314,8 +343,8 @@ namespace prueba1
                             DataRow row = dt.NewRow();
                             row["Matricula"] = reader["Matricula"].ToString();
                             row["Nombre"] = reader["Nombre"].ToString();
-                            row["Area"] = ObtenerNombreJefatura(Convert.ToInt32(reader["IdJefatura"]));
-                            
+                            row["Area"] = reader["NombreJefatura"] != DBNull.Value ? reader["NombreJefatura"].ToString() : "DESCONOCIDA";
+
                             int asistencias = Convert.ToInt32(reader["Asistencias"]);
                             int retardos = Convert.ToInt32(reader["Retardos"]);
                             int justificados = Convert.ToInt32(reader["Justificados"]);
@@ -611,11 +640,6 @@ namespace prueba1
             catch (Exception ex) { MessageBox.Show("Error al abrir el explorador de Windows: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error); }
         }
 
-        private string ObtenerNombreJefatura(int id)
-        {
-            string[] jefaturas = { "Otro", "Talleres", "Servicios", "Detall", "Comunav" };
-            if (id >= 1 && id <= jefaturas.Length) return jefaturas[id - 1];
-            return "DESCONOCIDA";
-        }
+       
     }
 }

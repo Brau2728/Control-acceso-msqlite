@@ -1,5 +1,6 @@
 using Microsoft.Win32;
 using System;
+using System.Data;
 using System.Data.SQLite;
 using System.IO;
 using System.Windows;
@@ -66,8 +67,8 @@ namespace prueba1
                             txtNombres.Text = reader["Nombres"].ToString();
                             txtApellidos.Text = reader["Apellidos"].ToString();
 
-                            cmbGrado.SelectedIndex = Convert.ToInt32(reader["IdGrado"]) - 1;
-                            cmbJefatura.SelectedIndex = Convert.ToInt32(reader["IdJefatura"]) - 1;
+                           cmbGrado.SelectedValue = Convert.ToInt32(reader["IdGrado"]);
+                           cmbJefatura.SelectedValue = Convert.ToInt32(reader["IdJefatura"]);
 
                             btnGuardarRegistro.IsEnabled = true;
 
@@ -99,6 +100,8 @@ namespace prueba1
         #region Ciclo de vida del Lector de Huella
         private void RegistroPersonal_Loaded(object sender, RoutedEventArgs e)
         {
+            CargarGradosCombo();
+            CargarJefaturasCombo();
             InitHuella();
             IniciarCaptura();
             
@@ -232,6 +235,24 @@ namespace prueba1
             catch { }
         }
 
+        private void CargarGradosCombo()
+        {
+            try
+            {
+                using (SQLiteConnection conexion = ConexionDB.ObtenerConexion())
+                {
+                    string query = "SELECT IdGrado, NombreGrado FROM Cat_Grados ORDER BY IdGrado ASC";
+                    DataTable dt = new DataTable();
+                    using (SQLiteDataAdapter adaptador = new SQLiteDataAdapter(query, conexion))
+                    {
+                        adaptador.Fill(dt);
+                    }
+                    cmbGrado.ItemsSource = dt.DefaultView;
+                }
+            }
+            catch (Exception ex) { MessageBox.Show("Error al cargar catálogo de grados: " + ex.Message); }
+        }
+
         private DPFP.FeatureSet ExtraerCaracteristicas(DPFP.Sample Sample, DPFP.Processing.DataPurpose Purpose)
         {
             DPFP.Processing.FeatureExtraction Extractor = new DPFP.Processing.FeatureExtraction();
@@ -315,9 +336,9 @@ namespace prueba1
                     cmd.Parameters.AddWithValue("@ape", txtApellidos.Text.Trim());
                     if (_esEdicion) cmd.Parameters.AddWithValue("@matOriginal", _matriculaOriginal);
                     
-                    cmd.Parameters.AddWithValue("@idGrado", int.Parse(((ComboBoxItem)cmbGrado.SelectedItem).Tag.ToString()));
-                    cmd.Parameters.AddWithValue("@idJefa", int.Parse(((ComboBoxItem)cmbJefatura.SelectedItem).Tag.ToString()));
-
+                    cmd.Parameters.AddWithValue("@idGrado", Convert.ToInt32(cmbGrado.SelectedValue));
+                    cmd.Parameters.AddWithValue("@idJefa", Convert.ToInt32(cmbJefatura.SelectedValue));
+                    
                     if (_fotoModificada)
                     {
                         if (imgFoto.Source != null && this.FindName("bdrFoto") is Border bordeFoto)
@@ -370,6 +391,25 @@ namespace prueba1
                 MessageBox.Show("Error crítico al guardar en Base de Datos: " + ex.Message, "Error SQL", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
+                private void CargarJefaturasCombo()
+        {
+            try
+            {
+                using (System.Data.SQLite.SQLiteConnection conexion = ConexionDB.ObtenerConexion())
+                {
+                    string query = "SELECT IdJefatura, NombreJefatura FROM Cat_Jefaturas ORDER BY NombreJefatura ASC";
+                    System.Data.DataTable dt = new System.Data.DataTable();
+                    using (System.Data.SQLite.SQLiteDataAdapter adaptador = new System.Data.SQLite.SQLiteDataAdapter(query, conexion))
+                    {
+                        adaptador.Fill(dt);
+                    }
+                    cmbJefatura.ItemsSource = dt.DefaultView;
+                }
+            }
+            catch (Exception ex) { MessageBox.Show("Error al cargar jefaturas: " + ex.Message); }
+        }
+
 
         private void BtnCancelar_Click(object sender, RoutedEventArgs e) { this.Close(); }
         #endregion
