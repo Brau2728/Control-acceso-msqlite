@@ -228,68 +228,100 @@ namespace prueba1
         private void ChkMasivoIndefinido_Checked(object sender, RoutedEventArgs e) { if (panelFechaFin != null) panelFechaFin.Visibility = Visibility.Collapsed; }
         private void ChkMasivoIndefinido_Unchecked(object sender, RoutedEventArgs e) { if (panelFechaFin != null) panelFechaFin.Visibility = Visibility.Visible; }
 
-       private void BtnAplicarMasivo_Click(object sender, RoutedEventArgs e)
+      private async void BtnAplicarMasivo_Click(object sender, RoutedEventArgs e)
         {
+            // ====================================================================
+            // FASE 1: LECTURA EN EL HILO DE LA INTERFAZ (UI)
+            // Extraemos todo lo visual a variables nativas de C# antes de ir al fondo.
+            // ====================================================================
             DataView vista = (DataView)dgMasivo.ItemsSource;
-            int actualizados = 0;
-            string tipoAccion = ((ComboBoxItem)cmbTipoAccion.SelectedItem).Tag.ToString();
+            List<string> matriculasSeleccionadas = new List<string>();
 
-            bool haySeleccionados = false;
+            // 1.1 Obtener quiénes están palomeados
             foreach (DataRowView fila in vista)
-                if (Convert.ToBoolean(fila["Seleccionado"]) == true) { haySeleccionados = true; break; }
+            {
+                if (Convert.ToBoolean(fila["Seleccionado"]) == true)
+                {
+                    matriculasSeleccionadas.Add(fila["Matricula"].ToString());
+                }
+            }
 
-            if (!haySeleccionados)
+            if (matriculasSeleccionadas.Count == 0)
             {
                 MessageBox.Show("Por favor, marca la casilla de al menos un elemento.", "Sin Selección", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            if (MessageBox.Show($"¿Aplicar este cambio a todos los elementos seleccionados?", "Confirmación Masiva", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+            if (MessageBox.Show($"¿Aplicar este cambio a {matriculasSeleccionadas.Count} elementos seleccionados?", "Confirmación Masiva", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
                 return;
+
+            // 1.2 Extraer las configuraciones de los ComboBox, TextBoxes y DatePickers
+            string tipoAccion = ((ComboBoxItem)cmbTipoAccion.SelectedItem).Tag.ToString();
+            
+            // Variables para almacenar lo que el usuario eligió
+            string nuevoEstatus = null;
+            string nuevaNovedad = null;
+            string detalleNovedad = null;
+            string fIni = null;
+            string fFin = null;
+
+            if (tipoAccion == "ESTATUS")
+            {
+                nuevoEstatus = ((ComboBoxItem)cmbMasivoEstatus.SelectedItem).Tag.ToString();
+            }
+            else if (tipoAccion == "NOVEDAD")
+            {
+                nuevaNovedad = ((ComboBoxItem)cmbMasivoNovedad.SelectedItem).Tag.ToString();
+                detalleNovedad = txtMasivoDetalle.Text.Trim();
+                
+                fIni = dpMasivoInicio.SelectedDate.HasValue ? dpMasivoInicio.SelectedDate.Value.ToString("yyyy-MM-dd") : null;
+                
+                bool esIndefinido = chkMasivoIndefinido.IsChecked == true;
+                fFin = (!esIndefinido && dpMasivoFin.SelectedDate.HasValue) ? dpMasivoFin.SelectedDate.Value.ToString("yyyy-MM-dd") : null;
+            }
+
+            // ====================================================================
+            // FASE 2: TRABAJO PESADO EN SEGUNDO PLANO
+            // ====================================================================
+            int actualizados = 0; // Llevamos la cuenta aquí
+
+            // Deshabilitamos el botón temporalmente para evitar doble clic accidental
+            Button btnOrigen = sender as Button;
+            if (btnOrigen != null) btnOrigen.IsEnabled = false;
 
             try
             {
-                using (SQLiteConnection conexion = ConexionDB.ObtenerConexion())
+                await Task.Run(() =>
                 {
-                    // 🚀 MEJORA DE RENDIMIENTO: Iniciamos una transacción maestra
-                    using (SQLiteTransaction transaccion = conexion.BeginTransaction())
+                    using (SQLiteConnection conexion = ConexionDB.ObtenerConexion())
                     {
-                        foreach (DataRowView fila in vista)
+                        // Seguimos usando la Transacción Maestra, es excelente para la velocidad
+                        using (SQLiteTransaction transaccion = conexion.BeginTransaction())
                         {
-                            if (Convert.ToBoolean(fila["Seleccionado"]) == true)
+                            // Recorremos nuestra lista segura de Strings, NO el DataGrid
+                            foreach (string matricula in matriculasSeleccionadas)
                             {
-                                string matricula = fila["Matricula"].ToString();
-
-                                // 🛡️ MEJORA DE SEGURIDAD: Uso estricto de parámetros
                                 using (SQLiteCommand cmd = new SQLiteCommand(conexion))
                                 {
                                     if (tipoAccion == "ESTATUS")
                                     {
-                                        string nuevoEstatus = ((ComboBoxItem)cmbMasivoEstatus.SelectedItem).Tag.ToString();
                                         cmd.CommandText = "UPDATE Personal_Naval SET Estatus = @estatus WHERE Matricula = @mat";
                                         cmd.Parameters.AddWithValue("@estatus", nuevoEstatus);
                                         cmd.Parameters.AddWithValue("@mat", matricula);
                                     }
                                     else if (tipoAccion == "NOVEDAD")
                                     {
-                                        string nuevaNovedad = ((ComboBoxItem)cmbMasivoNovedad.SelectedItem).Tag.ToString();
-                                        string detalle = txtMasivoDetalle.Text.Trim();
-                                        
                                         if (nuevaNovedad != "PRESENTE")
                                         {
                                             cmd.CommandText = "UPDATE Personal_Naval SET Novedad = @novedad, FechaInicioNovedad = @fIni, FechaFinNovedad = @fFin, DetalleNovedad = @detalle WHERE Matricula = @mat";
                                             
-                                            // Manejo inteligente de Fechas Nulas
-                                            cmd.Parameters.AddWithValue("@fIni", dpMasivoInicio.SelectedDate.HasValue ? dpMasivoInicio.SelectedDate.Value.ToString("yyyy-MM-dd") : DBNull.Value);
-                                            
-                                            // Si es indefinido o no hay fecha fin, mandamos NULL
-                                            cmd.Parameters.AddWithValue("@fFin", (chkMasivoIndefinido.IsChecked == false && dpMasivoFin.SelectedDate.HasValue) ? dpMasivoFin.SelectedDate.Value.ToString("yyyy-MM-dd") : DBNull.Value);
-                                            
-                                            cmd.Parameters.AddWithValue("@detalle", string.IsNullOrEmpty(detalle) ? DBNull.Value : detalle);
+                                            // Manejo de nulos en SQLite parametrizado
+                                            cmd.Parameters.AddWithValue("@fIni", fIni != null ? (object)fIni : DBNull.Value);
+                                            cmd.Parameters.AddWithValue("@fFin", fFin != null ? (object)fFin : DBNull.Value);
+                                            cmd.Parameters.AddWithValue("@detalle", string.IsNullOrEmpty(detalleNovedad) ? DBNull.Value : detalleNovedad);
                                         }
                                         else
                                         {
-                                            // Si regresa a presente, limpiamos el historial de esa novedad
                                             cmd.CommandText = "UPDATE Personal_Naval SET Novedad = @novedad, FechaInicioNovedad = NULL, FechaFinNovedad = NULL, DetalleNovedad = NULL WHERE Matricula = @mat";
                                         }
 
@@ -301,20 +333,29 @@ namespace prueba1
                                     actualizados++;
                                 }
                             }
+
+                            // Guardamos todo de golpe
+                            transaccion.Commit();
                         }
-
-                        // 🚀 AQUÍ OCURRE LA MAGIA: Guardamos todos los cambios en el disco de un solo golpe
-                        transaccion.Commit();
                     }
-                }
+                });
 
-                MessageBox.Show($"¡Operación exitosa!\n\nSe actualizó la situación de {actualizados} elementos en tiempo récord.", "Novedades Masivas", MessageBoxButton.OK, MessageBoxImage.Information);
+                // ====================================================================
+                // FASE 3: RETORNO AL HILO DE LA INTERFAZ
+                // ====================================================================
+                MessageBox.Show($"¡Operación exitosa!\n\nSe actualizó la situación de {actualizados} elementos en tiempo récord y sin congelar el sistema.", "Novedades Masivas", MessageBoxButton.OK, MessageBoxImage.Information);
                 CargarPersonalMasivo(); 
             }
             catch (Exception ex) 
             { 
                 MessageBox.Show("Error SQL en actualización: " + ex.Message, "Error Crítico", MessageBoxButton.OK, MessageBoxImage.Error); 
             }
+            finally
+            {
+                // Siempre reactivamos el botón pase lo que pase
+                if (btnOrigen != null) btnOrigen.IsEnabled = true;
+            }
         }
+      
     }
 }

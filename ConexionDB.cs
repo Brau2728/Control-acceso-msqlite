@@ -2,6 +2,10 @@
 using System.Data.SQLite;
 using System.IO;
 
+using System;
+using System.Data.SQLite;
+using System.IO;
+
 namespace prueba1 
 {
     public class ConexionDB
@@ -19,6 +23,9 @@ namespace prueba1
             SQLiteConnection conexion = new SQLiteConnection(connectionString);
             conexion.Open();
 
+            // =======================================================
+            // TODO TU CÓDIGO DE TABLAS INTACTO ABAJO DE ESTA LÍNEA
+            // =======================================================
             string sql = @"
             CREATE TABLE IF NOT EXISTS Usuarios_Sistema (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT, 
@@ -59,14 +66,13 @@ namespace prueba1
             );
 
              -- =======================================================
-             -- NUEVA TABLA: Catálogo Dinámico de Grados Navales
+             -- TABLA: Catálogo Dinámico de Grados Navales
              -- =======================================================
             CREATE TABLE IF NOT EXISTS Cat_Grados (
                 IdGrado INTEGER PRIMARY KEY AUTOINCREMENT,
                 NombreGrado TEXT NOT NULL UNIQUE
             );
 
-            -- Inserción de los grados oficiales con sus IDs exactos para no romper registros anteriores
             INSERT OR IGNORE INTO Cat_Grados (IdGrado, NombreGrado) VALUES (1, 'OTRO');
             INSERT OR IGNORE INTO Cat_Grados (IdGrado, NombreGrado) VALUES (2, 'MARINERO');
             INSERT OR IGNORE INTO Cat_Grados (IdGrado, NombreGrado) VALUES (3, 'CABO');
@@ -84,7 +90,7 @@ namespace prueba1
             INSERT OR IGNORE INTO Cat_Grados (IdGrado, NombreGrado) VALUES (15, 'ALMIRANTE');
 
             -- =======================================================
-            -- NUEVA TABLA: Catálogo Dinámico de Jefaturas y Organigrama
+            -- TABLA: Catálogo Dinámico de Jefaturas y Organigrama
             -- =======================================================
             CREATE TABLE IF NOT EXISTS Cat_Jefaturas (
                 IdJefatura INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -93,11 +99,9 @@ namespace prueba1
                 FOREIGN KEY (IdPadre) REFERENCES Cat_Jefaturas(IdJefatura) ON DELETE SET NULL
             );
             
-            -- Usuarios por defecto (con contraseñas cifradas BCrypt para '1234')
             INSERT OR IGNORE INTO Usuarios_Sistema (Username, PasswordHash, Rol) VALUES ('admin', '$2a$11$0n.O5K/Z.H1q/gL9bJqN.u8rO/l71I/gZ6J5gXvVzR4A7gX6D5yvW', 'ADMIN');
             INSERT OR IGNORE INTO Usuarios_Sistema (Username, PasswordHash, Rol) VALUES ('guardia', '$2a$11$0n.O5K/Z.H1q/gL9bJqN.u8rO/l71I/gZ6J5gXvVzR4A7gX6D5yvW', 'GUARDIA');
 
-            -- Inserción de la estructura base del organigrama (solo se agregarán si no existen)
             INSERT OR IGNORE INTO Cat_Jefaturas (IdJefatura, NombreJefatura, IdPadre) VALUES (1, 'COMANDANCIA / DIRECCIÓN', NULL);
             INSERT OR IGNORE INTO Cat_Jefaturas (IdJefatura, NombreJefatura, IdPadre) VALUES (2, 'TALLERES', 1);
             INSERT OR IGNORE INTO Cat_Jefaturas (IdJefatura, NombreJefatura, IdPadre) VALUES (3, 'SERVICIOS', 1);
@@ -110,13 +114,11 @@ namespace prueba1
                 cmd.ExecuteNonQuery();
             }
 
-            // Parches silenciosos para Bases de Datos que ya existen (No borra tu info actual)
+            // Parches silenciosos para Bases de Datos que ya existen
             try { using (SQLiteCommand cmd = new SQLiteCommand("ALTER TABLE Personal_Naval ADD COLUMN Estatus TEXT DEFAULT 'ACTIVO'", conexion)) { cmd.ExecuteNonQuery(); } } catch { }
             try { using (SQLiteCommand cmd = new SQLiteCommand("ALTER TABLE Personal_Naval ADD COLUMN Novedad TEXT DEFAULT 'PRESENTE'", conexion)) { cmd.ExecuteNonQuery(); } } catch { }
             try { using (SQLiteCommand cmd = new SQLiteCommand("ALTER TABLE Personal_Naval ADD COLUMN Huella2 BLOB", conexion)) { cmd.ExecuteNonQuery(); } } catch { }
             try { using (SQLiteCommand cmd = new SQLiteCommand("ALTER TABLE Personal_Naval ADD COLUMN Huella3 BLOB", conexion)) { cmd.ExecuteNonQuery(); } } catch { }
-            
-            // NUEVAS COLUMNAS PARA FECHAS DE NOVEDADES AUTOMATIZADAS
             try { using (SQLiteCommand cmd = new SQLiteCommand("ALTER TABLE Personal_Naval ADD COLUMN FechaInicioNovedad DATE", conexion)) { cmd.ExecuteNonQuery(); } } catch { }
             try { using (SQLiteCommand cmd = new SQLiteCommand("ALTER TABLE Personal_Naval ADD COLUMN FechaFinNovedad DATE", conexion)) { cmd.ExecuteNonQuery(); } } catch { }
 

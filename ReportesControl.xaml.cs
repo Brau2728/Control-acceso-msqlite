@@ -7,11 +7,17 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Diagnostics;
 using Microsoft.Win32;
+using System.Collections.Generic;
+using System.Linq;
+using System.Windows.Media;
+using System.Windows.Data;
 
 // LIBRERÍAS DE QUESTPDF PARA GENERAR EL PDF OFICIAL
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
+
+using ClosedXML.Excel;
 
 namespace prueba1
 {
@@ -301,71 +307,397 @@ catch (Exception ex) { MessageBox.Show("Error al cargar bitácora: " + ex.Messag
         // =========================================================
         // --- 3. REPORTE CONCENTRADO ---
         // =========================================================
-        private void BtnGenerarConcentrado_Click(object sender, RoutedEventArgs e)
+        private async void BtnGenerarConcentrado_Click(object sender, RoutedEventArgs e)
+{
+    if (!dpConcentradoMes.SelectedDate.HasValue) return;
+
+    string mes = dpConcentradoMes.SelectedDate.Value.ToString("MM");
+    string anio = dpConcentradoMes.SelectedDate.Value.ToString("yyyy");
+    TimeSpan tolerancia = new TimeSpan(7, 15, 0); 
+    int diasEnMes = DateTime.DaysInMonth(Convert.ToInt32(anio), Convert.ToInt32(mes));
+
+    Button btnOrigen = sender as Button;
+    if (btnOrigen != null) btnOrigen.IsEnabled = false;
+
+    try
+    {
+        DataTable dtConcentrado = null;
+
+        await Task.Run(() =>
         {
-            if (!dpConcentradoMes.SelectedDate.HasValue) return;
-            string mes = dpConcentradoMes.SelectedDate.Value.ToString("MM");
-            string anio = dpConcentradoMes.SelectedDate.Value.ToString("yyyy");
-            string tolerancia = "07:15:00"; 
-
-            try
+            using (SQLiteConnection conexion = ConexionDB.ObtenerConexion())
             {
-                using (SQLiteConnection conexion = ConexionDB.ObtenerConexion())
+                // 1. Extraer accesos
+                string queryAccesos = $@"
+                    SELECT Matricula, date(FechaHora) AS Fecha, time(FechaHora) AS Hora, MensajeAcceso 
+                    FROM Registro_Accesos 
+                    WHERE strftime('%m', FechaHora) = '{mes}' AND strftime('%Y', FechaHora) = '{anio}'";
+                
+                var accesosDict = new Dictionary<string, List<AccesoInfo>>();
+                using (SQLiteCommand cmdAcc = new SQLiteCommand(queryAccesos, conexion))
+                using (SQLiteDataReader readerAcc = cmdAcc.ExecuteReader())
                 {
-                  string query = $@"
-                    SELECT 
-                        p.Matricula, 
-                        p.Nombres || ' ' || p.Apellidos AS Nombre, 
-                        p.IdJefatura, j.NombreJefatura,
-                        (SELECT COUNT(DISTINCT date(r1.FechaHora)) FROM Registro_Accesos r1 WHERE r1.Matricula = p.Matricula AND strftime('%m', r1.FechaHora) = '{mes}' AND strftime('%Y', r1.FechaHora) = '{anio}' AND time(r1.FechaHora) <= '{tolerancia}' AND r1.MensajeAcceso NOT LIKE '%JUSTIFICACIÓN%') AS Asistencias,
-                        (SELECT COUNT(DISTINCT date(r2.FechaHora)) FROM Registro_Accesos r2 WHERE r2.Matricula = p.Matricula AND strftime('%m', r2.FechaHora) = '{mes}' AND strftime('%Y', r2.FechaHora) = '{anio}' AND time(r2.FechaHora) > '{tolerancia}' AND r2.MensajeAcceso NOT LIKE '%JUSTIFICACIÓN%') AS Retardos,
-                        (SELECT COUNT(r3.IdRegistro) FROM Registro_Accesos r3 WHERE r3.Matricula = p.Matricula AND strftime('%m', r3.FechaHora) = '{mes}' AND strftime('%Y', r3.FechaHora) = '{anio}' AND r3.MensajeAcceso LIKE '%JUSTIFICACIÓN%') AS Justificados,
-                        p.Novedad
-                    FROM Personal_Naval p 
-                    LEFT JOIN Cat_Jefaturas j ON p.IdJefatura = j.IdJefatura
-                    WHERE p.Estatus = 'ACTIVO'";
-                    SQLiteCommand cmd = new SQLiteCommand(query, conexion);
-                    using (SQLiteDataReader reader = cmd.ExecuteReader())
+                    while (readerAcc.Read())
                     {
-                        DataTable dt = new DataTable();
-                        dt.Columns.Add("Matricula");
-                        dt.Columns.Add("Nombre");
-                        dt.Columns.Add("Area");
-                        dt.Columns.Add("TotalAsistencias");
-                        dt.Columns.Add("TotalRetardos");
-                        dt.Columns.Add("TotalFaltas");
-                        dt.Columns.Add("TotalJustificados");
-
-                        int diasEnMes = DateTime.DaysInMonth(Convert.ToInt32(anio), Convert.ToInt32(mes));
-
-                        while (reader.Read())
+                        string mat = readerAcc["Matricula"].ToString();
+                        if (!accesosDict.ContainsKey(mat)) accesosDict[mat] = new List<AccesoInfo>();
+                        
+                        string horaStr = readerAcc["Hora"]?.ToString();
+                        if (!string.IsNullOrEmpty(horaStr))
                         {
-                            DataRow row = dt.NewRow();
-                            row["Matricula"] = reader["Matricula"].ToString();
-                            row["Nombre"] = reader["Nombre"].ToString();
-                            row["Area"] = reader["NombreJefatura"] != DBNull.Value ? reader["NombreJefatura"].ToString() : "DESCONOCIDA";
-
-                            int asistencias = Convert.ToInt32(reader["Asistencias"]);
-                            int retardos = Convert.ToInt32(reader["Retardos"]);
-                            int justificados = Convert.ToInt32(reader["Justificados"]);
-                            
-                            int faltasAprox = diasEnMes - (asistencias + retardos + justificados);
-                            if (faltasAprox < 0) faltasAprox = 0;
-                            if (reader["Novedad"].ToString() != "PRESENTE") faltasAprox = 0; 
-
-                            row["TotalAsistencias"] = asistencias.ToString();
-                            row["TotalRetardos"] = retardos.ToString();
-                            row["TotalJustificados"] = justificados.ToString();
-                            row["TotalFaltas"] = faltasAprox.ToString();
-
-                            dt.Rows.Add(row);
+                            accesosDict[mat].Add(new AccesoInfo { 
+                                Fecha = readerAcc["Fecha"].ToString(), 
+                                Hora = TimeSpan.Parse(horaStr),
+                                Mensaje = readerAcc["MensajeAcceso"].ToString()
+                            });
                         }
-                        dgConcentrado.ItemsSource = dt.DefaultView;
                     }
                 }
+
+                // 2. Traer personal
+                string queryPersonal = @"
+                    SELECT p.Matricula, p.Nombres || ' ' || p.Apellidos AS Nombre, 
+                           IFNULL(j.NombreJefatura, 'DESCONOCIDA') AS Area,
+                           IFNULL(p.Novedad, 'PRESENTE') AS Novedad, p.FechaInicioNovedad, p.FechaFinNovedad
+                    FROM Personal_Naval p
+                    LEFT JOIN Cat_Jefaturas j ON p.IdJefatura = j.IdJefatura
+                    WHERE p.Estatus = 'ACTIVO' ORDER BY p.IdJefatura";
+
+                DataTable dt = new DataTable();
+                dt.Columns.Add("Matricula");
+                dt.Columns.Add("Nombre");
+                dt.Columns.Add("Area");
+                
+                // === SOLUCIÓN: COLUMNAS CON PREFIJO PARA EVITAR CRASH === (Ej: Dia01, Dia02)
+                for (int i = 1; i <= diasEnMes; i++) dt.Columns.Add("Dia" + i.ToString("D2"));
+
+                dt.Columns.Add("Asist", typeof(int));
+                dt.Columns.Add("Retard", typeof(int));
+                dt.Columns.Add("Faltas", typeof(int));
+                dt.Columns.Add("Noved", typeof(int));
+
+                using (SQLiteCommand cmdPers = new SQLiteCommand(queryPersonal, conexion))
+                using (SQLiteDataReader readerPers = cmdPers.ExecuteReader())
+                {
+                    while (readerPers.Read())
+                    {
+                        DataRow row = dt.NewRow();
+                        string matricula = readerPers["Matricula"].ToString();
+                        row["Matricula"] = matricula;
+                        row["Nombre"] = readerPers["Nombre"].ToString();
+                        row["Area"] = readerPers["Area"].ToString();
+
+                        int cAsistencias = 0, cRetardos = 0, cFaltas = 0, cNovedades = 0;
+                        string novedadActual = readerPers["Novedad"].ToString().Trim();
+                        if (string.IsNullOrEmpty(novedadActual)) novedadActual = "PRESENTE";
+
+                        DateTime? fIni = readerPers["FechaInicioNovedad"] != DBNull.Value ? Convert.ToDateTime(readerPers["FechaInicioNovedad"]) : (DateTime?)null;
+                        DateTime? fFin = readerPers["FechaFinNovedad"] != DBNull.Value ? Convert.ToDateTime(readerPers["FechaFinNovedad"]) : (DateTime?)null;
+
+                        // 3. Evaluar día por día
+                        for (int dia = 1; dia <= diasEnMes; dia++)
+                        {
+                            DateTime fechaActual = new DateTime(Convert.ToInt32(anio), Convert.ToInt32(mes), dia);
+                            string fechaStr = fechaActual.ToString("yyyy-MM-dd");
+                            string celdaValor = "";
+                            bool tieneAcceso = false;
+
+                            if (accesosDict.ContainsKey(matricula))
+                            {
+                                var accesosDia = accesosDict[matricula].Where(a => a.Fecha == fechaStr).ToList();
+                                if (accesosDia.Any())
+                                {
+                                    tieneAcceso = true;
+                                    if (accesosDia.Any(a => a.Mensaje.Contains("JUSTIFICA")))
+                                    {
+                                        celdaValor = "P"; cAsistencias++;
+                                    }
+                                    else
+                                    {
+                                        var primeraLectura = accesosDia.OrderBy(a => a.Hora).First();
+                                        if (primeraLectura.Hora <= tolerancia) { celdaValor = "P"; cAsistencias++; }
+                                        else { celdaValor = "R"; cRetardos++; }
+                                    }
+                                }
+                            }
+
+                            if (!tieneAcceso)
+                            {
+                                if (fechaActual > DateTime.Now.Date)
+                                {
+                                    celdaValor = ""; 
+                                }
+                                else if (novedadActual != "PRESENTE" && (!fIni.HasValue || fechaActual >= fIni.Value) && (!fFin.HasValue || fechaActual <= fFin.Value))
+                                {
+                                    switch(novedadActual.ToUpper()) {
+                                        case "VACACIONES": celdaValor = "V"; break;
+                                        case "COMISION": 
+                                        case "COMISIÓN": celdaValor = "C"; break; // Acepta ambas
+                                        case "HOSPITALIZADO": 
+                                        case "REBAJADO": celdaValor = "N"; break;
+                                        default: celdaValor = novedadActual.Length > 0 ? novedadActual.Substring(0,1) : "N"; break;
+                                    }
+                                    cNovedades++;
+                                }
+                                else
+                                {
+                                    celdaValor = "F"; cFaltas++;
+                                }
+                            }
+
+                            // === ASIGNAMOS USANDO EL PREFIJO ===
+                            row["Dia" + dia.ToString("D2")] = celdaValor;
+                        }
+
+                        row["Asist"] = cAsistencias; row["Retard"] = cRetardos; 
+                        row["Faltas"] = cFaltas; row["Noved"] = cNovedades;
+                        dt.Rows.Add(row);
+                    }
+                }
+                dtConcentrado = dt;
             }
-            catch (Exception ex) { MessageBox.Show("Error en concentrado: " + ex.Message); }
+        });
+
+        if (dtConcentrado != null)
+        {
+            // === 1. DESTRUIMOS EL DISEÑO VIEJO DEL XAML ===
+            dgConcentrado.Columns.Clear();
+            
+            // === 2. FORZAMOS A QUE DIBUJE LAS 31 COLUMNAS NUEVAS ===
+            dgConcentrado.AutoGenerateColumns = true; 
+            
+            dgConcentrado.AutoGeneratingColumn -= DgConcentrado_AutoGeneratingColumn;
+            dgConcentrado.AutoGeneratingColumn += DgConcentrado_AutoGeneratingColumn;
+            dgConcentrado.ItemsSource = dtConcentrado.DefaultView;
         }
+    }
+    catch (Exception ex) 
+    { 
+        MessageBox.Show("Error al construir reporte matricial: " + ex.Message, "Error Crítico", MessageBoxButton.OK, MessageBoxImage.Error); 
+    }
+    finally { if (btnOrigen != null) btnOrigen.IsEnabled = true; }
+}
+// === CLASE AUXILIAR COLOCADA AQUÍ PARA EVITAR ERRORES DE LECTURA ===
+private class AccesoInfo 
+{
+    public string Fecha { get; set; }
+    public TimeSpan Hora { get; set; }
+    public string Mensaje { get; set; }
+}
+
+      private void DgConcentrado_AutoGeneratingColumn(object sender, DataGridAutoGeneratingColumnEventArgs e)
+{
+    if (e.Column is DataGridTextColumn col)
+    {
+        if (e.PropertyName.StartsWith("Dia") && int.TryParse(e.PropertyName.Substring(3), out int dia))
+        {
+            col.Binding = new Binding(e.PropertyName);
+            col.Width = 48; 
+            
+            string tituloColumna = dia.ToString("D2");
+            if (dpConcentradoMes.SelectedDate.HasValue)
+            {
+                try
+                {
+                    DateTime fechaColumna = new DateTime(dpConcentradoMes.SelectedDate.Value.Year, dpConcentradoMes.SelectedDate.Value.Month, dia);
+                    string nombreDia = fechaColumna.ToString("ddd", new System.Globalization.CultureInfo("es-MX"));
+                    string diaLetras = char.ToUpper(nombreDia[0]) + nombreDia.Substring(1, 1);
+                    tituloColumna = $"{diaLetras}\n{dia:D2}";
+                }
+                catch { } 
+            }
+
+            col.Header = tituloColumna;
+            
+            Style style = new Style(typeof(TextBlock));
+            style.Setters.Add(new Setter(TextBlock.TextAlignmentProperty, TextAlignment.Center));
+            style.Setters.Add(new Setter(TextBlock.FontWeightProperty, FontWeights.Bold));
+
+            string path = e.PropertyName;
+
+            // Formato 'P' -> Verde
+            DataTrigger trgP = new DataTrigger { Binding = new Binding(path), Value = "P" };
+            trgP.Setters.Add(new Setter(TextBlock.ForegroundProperty, new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#065F46"))));
+            trgP.Setters.Add(new Setter(TextBlock.BackgroundProperty, new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#D1FAE5"))));
+            style.Triggers.Add(trgP);
+
+            // Formato 'R' -> Naranja
+            DataTrigger trgR = new DataTrigger { Binding = new Binding(path), Value = "R" };
+            trgR.Setters.Add(new Setter(TextBlock.ForegroundProperty, new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#B45309"))));
+            trgR.Setters.Add(new Setter(TextBlock.BackgroundProperty, new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#FEF3C7"))));
+            style.Triggers.Add(trgR);
+
+            // Formato 'F' -> Rojo
+            DataTrigger trgF = new DataTrigger { Binding = new Binding(path), Value = "F" };
+            trgF.Setters.Add(new Setter(TextBlock.ForegroundProperty, new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#991B1B"))));
+            trgF.Setters.Add(new Setter(TextBlock.BackgroundProperty, new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#FEE2E2"))));
+            style.Triggers.Add(trgF);
+
+            // Formato 'V' -> Azul (Vacaciones)
+            DataTrigger trgV = new DataTrigger { Binding = new Binding(path), Value = "V" };
+            trgV.Setters.Add(new Setter(TextBlock.ForegroundProperty, new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#1E40AF")))); 
+            trgV.Setters.Add(new Setter(TextBlock.BackgroundProperty, new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#DBEAFE"))));
+            style.Triggers.Add(trgV);
+
+            // === AHORA SÍ: Formato 'C' -> Azul (Comisión) ===
+            DataTrigger trgC = new DataTrigger { Binding = new Binding(path), Value = "C" };
+            trgC.Setters.Add(new Setter(TextBlock.ForegroundProperty, new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#1E40AF")))); 
+            trgC.Setters.Add(new Setter(TextBlock.BackgroundProperty, new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#DBEAFE"))));
+            style.Triggers.Add(trgC);
+
+            // === AHORA SÍ: Formato 'N' -> Azul (Médico / Hospitalizado / Rebajado) ===
+            DataTrigger trgN = new DataTrigger { Binding = new Binding(path), Value = "N" };
+            trgN.Setters.Add(new Setter(TextBlock.ForegroundProperty, new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#1E40AF")))); 
+            trgN.Setters.Add(new Setter(TextBlock.BackgroundProperty, new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#DBEAFE"))));
+            style.Triggers.Add(trgN);
+            
+            col.ElementStyle = style;
+        }
+        else if (e.PropertyName == "Matricula" || e.PropertyName == "Nombre" || e.PropertyName == "Area")
+        {
+            if (e.PropertyName == "Matricula") col.Header = "MATRÍCULA";
+            if (e.PropertyName == "Nombre") col.Header = "NOMBRE COMPLETO";
+            if (e.PropertyName == "Area") col.Header = "JEFATURA";
+            col.Width = DataGridLength.Auto;
+        }
+        else 
+        {
+            if (e.PropertyName == "Asist") col.Header = "ASIST";
+            if (e.PropertyName == "Retard") col.Header = "RETARD";
+            if (e.PropertyName == "Faltas") col.Header = "FALTAS";
+            if (e.PropertyName == "Noved") col.Header = "NOVED";
+
+            col.Width = 65;
+            Style style = new Style(typeof(TextBlock));
+            style.Setters.Add(new Setter(TextBlock.TextAlignmentProperty, TextAlignment.Center));
+            style.Setters.Add(new Setter(TextBlock.FontWeightProperty, FontWeights.Bold));
+            style.Setters.Add(new Setter(TextBlock.ForegroundProperty, new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#334155"))));
+            col.ElementStyle = style;
+        }
+    }
+}
+
+        private void BtnExportarConcentradoExcel_Click(object sender, RoutedEventArgs e)
+{
+    // Verificamos que la tabla tenga datos en pantalla antes de exportar
+    if (dgConcentrado.ItemsSource == null || dgConcentrado.Items.Count == 0)
+    {
+        MessageBox.Show("Primero debes generar el desglose analítico en pantalla antes de exportar.", "Sin Datos", MessageBoxButton.OK, MessageBoxImage.Warning);
+        return;
+    }
+
+    SaveFileDialog dlg = new SaveFileDialog
+    {
+        FileName = "Estado_Fuerza_Mensual_" + dpConcentradoMes.SelectedDate.Value.ToString("yyyy_MM"),
+        // ¡OJO! Ahora usamos .xlsx nativo moderno, adiós a los errores de compatibilidad
+        Filter = "Libro de Excel (*.xlsx)|*.xlsx" 
+    };
+
+    if (dlg.ShowDialog() == true)
+    {
+        try
+        {
+            DataView vista = (DataView)dgConcentrado.ItemsSource;
+            DataTable dt = vista.Table;
+
+            // Iniciamos la creación del archivo Excel real
+            using (var workbook = new XLWorkbook())
+            {
+                var worksheet = workbook.Worksheets.Add("Estado de Fuerza");
+
+                // ==============================================================
+                // 1. GENERAR ENCABEZADOS Y ESTILO MILITAR
+                // ==============================================================
+                for (int i = 0; i < dt.Columns.Count; i++)
+                {
+                    string tituloCabecera = dt.Columns[i].ColumnName;
+                    
+                    // Renombramos para la presentación
+                    if (tituloCabecera.StartsWith("Dia")) tituloCabecera = tituloCabecera.Substring(3);
+                    else if (tituloCabecera == "Matricula") tituloCabecera = "MATRÍCULA";
+                    else if (tituloCabecera == "Nombre") tituloCabecera = "NOMBRE COMPLETO";
+                    else if (tituloCabecera == "Area") tituloCabecera = "JEFATURA";
+                    else if (tituloCabecera == "Asist") tituloCabecera = "TOTAL ASIST";
+                    else if (tituloCabecera == "Retard") tituloCabecera = "TOTAL RETARD";
+                    else if (tituloCabecera == "Faltas") tituloCabecera = "TOTAL FALTAS";
+                    else if (tituloCabecera == "Noved") tituloCabecera = "TOTAL NOVED";
+
+                    var celdaHeader = worksheet.Cell(1, i + 1);
+                    celdaHeader.Value = tituloCabecera;
+                    celdaHeader.Style.Fill.BackgroundColor = XLColor.FromHtml("#1E40AF"); // Azul Marino Institucional
+                    celdaHeader.Style.Font.FontColor = XLColor.White;
+                    celdaHeader.Style.Font.Bold = true;
+                    celdaHeader.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                }
+
+                // ==============================================================
+                // 2. INYECTAR DATOS Y COLORES EN TIEMPO REAL
+                // ==============================================================
+                for (int r = 0; r < dt.Rows.Count; r++)
+                {
+                    for (int c = 0; c < dt.Columns.Count; c++)
+                    {
+                        var celda = worksheet.Cell(r + 2, c + 1); // R+2 porque la fila 1 son los encabezados
+                        string valor = dt.Rows[r][c].ToString();
+                        celda.Value = valor;
+
+                        // Alineación por defecto: Centrado para las letras del mes y totales
+                        celda.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                        celda.Style.Font.Bold = true;
+
+                        string colName = dt.Columns[c].ColumnName;
+                        if (colName == "Nombre" || colName == "Area")
+                        {
+                            celda.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+                            celda.Style.Font.Bold = false; // Nombres en letra normal
+                        }
+
+                        // === MAPEO DE COLORES DE LA LEYENDA ===
+                        if (valor == "P") { 
+                            celda.Style.Fill.BackgroundColor = XLColor.FromHtml("#D1FAE5"); 
+                            celda.Style.Font.FontColor = XLColor.FromHtml("#065F46"); 
+                        }
+                        else if (valor == "R") { 
+                            celda.Style.Fill.BackgroundColor = XLColor.FromHtml("#FEF3C7"); 
+                            celda.Style.Font.FontColor = XLColor.FromHtml("#B45309"); 
+                        }
+                        else if (valor == "F") { 
+                            celda.Style.Fill.BackgroundColor = XLColor.FromHtml("#FEE2E2"); 
+                            celda.Style.Font.FontColor = XLColor.FromHtml("#991B1B"); 
+                        }
+                        else if (valor == "V" || valor == "C" || valor == "N") { 
+                            celda.Style.Fill.BackgroundColor = XLColor.FromHtml("#DBEAFE"); 
+                            celda.Style.Font.FontColor = XLColor.FromHtml("#1E40AF"); 
+                        }
+                        
+                        // Le ponemos un borde ligerito a cada celda para que parezca reporte formal
+                        celda.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                        celda.Style.Border.OutsideBorderColor = XLColor.FromHtml("#E2E8F0");
+                    }
+                }
+
+                // ==============================================================
+                // 3. MAGIA: AUTO-AJUSTAR COLUMNAS PARA QUE NADA SE VEA AMONTONADO
+                // ==============================================================
+                worksheet.Columns().AdjustToContents();
+
+                // Congelamos la primera fila y las columnas de datos personales para que 
+                // al navegar por los 31 días hacia la derecha, los nombres no se pierdan de vista
+                worksheet.SheetView.FreezeRows(1);
+                worksheet.SheetView.FreezeColumns(3);
+
+                // Guardamos el archivo físico
+                workbook.SaveAs(dlg.FileName);
+            }
+
+            MessageBox.Show("¡Evidencia documental exportada exitosamente en formato Excel Nativo!\n\nEl archivo está listo para auditoría sin mensajes de error.", "Exportación Exitosa", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show("Error crítico al generar archivo de Excel: " + ex.Message, "Error de Guardado", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+}
 
         // =========================================================
         // --- 4. EXPORTACIÓN BIOMÉTRICA (EXCEL Y PDF OFICIAL) ---
@@ -428,106 +760,132 @@ catch (Exception ex) { MessageBox.Show("Error al cargar bitácora: " + ex.Messag
             }
         }
 
-        private void BtnExportarPDF_Click(object sender, RoutedEventArgs e)
+        private async void BtnExportarPDF_Click(object sender, RoutedEventArgs e)
         {
-            if (dgCorteAsistencia.Items.Count == 0) return;
+    if (dgCorteAsistencia.Items.Count == 0) return;
 
-            string autorizador = "";
-            if (!SolicitarFirmaBiometrica(out autorizador)) return;
+    string autorizador = "";
+    if (!SolicitarFirmaBiometrica(out autorizador)) return;
 
-            SaveFileDialog dlg = new SaveFileDialog { 
-                FileName = "Corte_Oficial_" + DateTime.Now.ToString("yyyyMMdd_HHmm"), 
-                Filter = "Documento PDF (.pdf)|*.pdf" 
-            };
+    SaveFileDialog dlg = new SaveFileDialog { 
+        FileName = "Corte_Oficial_" + DateTime.Now.ToString("yyyyMMdd_HHmm"), 
+        Filter = "Documento PDF (.pdf)|*.pdf" 
+    };
 
-            if (dlg.ShowDialog() == true)
+    if (dlg.ShowDialog() == true)
+    {
+        try
+        {
+            // ====================================================================
+            // FASE 1: LECTURA EN EL HILO DE LA INTERFAZ (UI)
+            // Extraemos todos los datos de los controles gráficos antes de ir al fondo.
+            // Usamos .Copy() en la tabla para evitar problemas de hilos cruzados.
+            // ====================================================================
+            DataTable dt = ((DataView)dgCorteAsistencia.ItemsSource).Table.Copy();
+            string fechaTexto = dpCorteFecha.SelectedDate.Value.ToString("dd/MM/yyyy");
+            string horaInicioTexto = txtCorteHoraInicio.Text;
+            string horaFinTexto = txtCorteHoraFin.Text;
+            string resumenTexto = _resumenActual;
+            string rutaArchivo = dlg.FileName;
+            string fechaImpresion = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
+
+            // ====================================================================
+            // FASE 2: TRABAJO PESADO EN SEGUNDO PLANO (NO CONGELA LA PANTALLA)
+            // ====================================================================
+            await Task.Run(() =>
             {
-                try
+                Document.Create(container =>
                 {
-                    DataTable dt = ((DataView)dgCorteAsistencia.ItemsSource).Table;
-                    string fechaTexto = dpCorteFecha.SelectedDate.Value.ToString("dd/MM/yyyy");
-
-                    // EL DISEÑO EXACTO ORIGINAL QUE PEDISTE
-                    Document.Create(container =>
+                    container.Page(page =>
                     {
-                        container.Page(page =>
+                        page.Size(PageSizes.A4);
+                        page.Margin(1.5f, Unit.Centimetre);
+                        page.PageColor(QuestPDF.Helpers.Colors.White);
+                        page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Arial"));
+
+                        page.Header().PaddingBottom(10).BorderBottom(2).BorderColor(QuestPDF.Helpers.Colors.Grey.Darken2).Row(row =>
                         {
-                            page.Size(PageSizes.A4);
-                            page.Margin(1.5f, Unit.Centimetre);
-                            page.PageColor(QuestPDF.Helpers.Colors.White);
-                            page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Arial"));
-
-                            page.Header().PaddingBottom(10).BorderBottom(2).BorderColor(QuestPDF.Helpers.Colors.Grey.Darken2).Row(row =>
+                            row.RelativeItem().Column(col =>
                             {
-                                row.RelativeItem().Column(col =>
+                                col.Item().Text("ARMADA DE MÉXICO").FontSize(16).Bold().FontColor(QuestPDF.Helpers.Colors.Black);
+                                col.Item().Text("SISTEMA INTEGRAL DE CONTROL BIOMÉTRICO").FontSize(12).FontColor(QuestPDF.Helpers.Colors.Grey.Darken3);
+                                col.Item().Text("REPORTE OFICIAL DE ESTADO DE FUERZA").FontSize(14).Bold().FontColor(QuestPDF.Helpers.Colors.Blue.Darken4);
+                                // AQUI USAMOS LAS VARIABLES LOCALES EXTRAÍDAS
+                                col.Item().PaddingTop(5).Text($"FECHA: {fechaTexto}   |   TURNO: {horaInicioTexto} hrs - {horaFinTexto} hrs").FontSize(10);
+                            });
+                            row.ConstantItem(60).AlignCenter().Text("⚓").FontSize(40);
+                        });
+
+                        page.Content().PaddingVertical(15).Column(col =>
+                        {
+                            col.Item().Table(table =>
+                            {
+                                table.ColumnsDefinition(columns =>
                                 {
-                                    col.Item().Text("ARMADA DE MÉXICO").FontSize(16).Bold().FontColor(QuestPDF.Helpers.Colors.Black);
-                                    col.Item().Text("SISTEMA INTEGRAL DE CONTROL BIOMÉTRICO").FontSize(12).FontColor(QuestPDF.Helpers.Colors.Grey.Darken3);
-                                    col.Item().Text("REPORTE OFICIAL DE ESTADO DE FUERZA").FontSize(14).Bold().FontColor(QuestPDF.Helpers.Colors.Blue.Darken4);
-                                    col.Item().PaddingTop(5).Text($"FECHA: {fechaTexto}   |   TURNO: {txtCorteHoraInicio.Text} hrs - {txtCorteHoraFin.Text} hrs").FontSize(10);
+                                    columns.ConstantColumn(60);
+                                    columns.RelativeColumn();
+                                    columns.ConstantColumn(80);
+                                    columns.ConstantColumn(60);
+                                    columns.ConstantColumn(80);
                                 });
-                                row.ConstantItem(60).AlignCenter().Text("⚓").FontSize(40);
+
+                                string[] cabeceras = { "MATRÍCULA", "NOMBRE COMPLETO", "JEFATURA", "LLEGADA", "SITUACIÓN" };
+                                foreach (var c in cabeceras)
+                                    table.Cell().Background(QuestPDF.Helpers.Colors.Blue.Darken4).Padding(5).Text(c).FontColor(QuestPDF.Helpers.Colors.White).Bold().FontSize(9);
+
+                                bool alternate = false;
+                                foreach (DataRow fila in dt.Rows)
+                                {
+                                    var bgColor = alternate ? QuestPDF.Helpers.Colors.Grey.Lighten4 : QuestPDF.Helpers.Colors.White;
+                                    table.Cell().Background(bgColor).BorderBottom(1).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten3).Padding(4).Text(fila["Matricula"].ToString()).FontSize(8);
+                                    table.Cell().Background(bgColor).BorderBottom(1).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten3).Padding(4).Text(fila["NombreCompleto"].ToString()).FontSize(8);
+                                    table.Cell().Background(bgColor).BorderBottom(1).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten3).Padding(4).Text(fila["Jefatura"].ToString()).FontSize(8);
+                                    table.Cell().Background(bgColor).BorderBottom(1).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten3).Padding(4).Text(fila["HoraEntrada"].ToString()).FontSize(8);
+                                    
+                                    string sit = fila["Situacion"].ToString();
+                                    var sitColor = sit == "PRESENTE" ? QuestPDF.Helpers.Colors.Green.Darken2 : (sit == "FALTISTA" ? QuestPDF.Helpers.Colors.Red.Darken2 : QuestPDF.Helpers.Colors.Orange.Darken3);
+                                    table.Cell().Background(bgColor).BorderBottom(1).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten3).Padding(4).Text(sit).FontColor(sitColor).Bold().FontSize(8);
+                                    
+                                    alternate = !alternate;
+                                }
                             });
 
-                            page.Content().PaddingVertical(15).Column(col =>
-                            {
-                                col.Item().Table(table =>
-                                {
-                                    table.ColumnsDefinition(columns =>
-                                    {
-                                        columns.ConstantColumn(60);
-                                        columns.RelativeColumn();
-                                        columns.ConstantColumn(80);
-                                        columns.ConstantColumn(60);
-                                        columns.ConstantColumn(80);
-                                    });
+                            col.Item().PaddingTop(20).Text("RESUMEN OPERATIVO:").Bold().FontSize(11);
+                            // USAMOS LA VARIABLE DE RESUMEN
+                            col.Item().Text(resumenTexto).FontSize(10); 
+                        });
 
-                                    string[] cabeceras = { "MATRÍCULA", "NOMBRE COMPLETO", "JEFATURA", "LLEGADA", "SITUACIÓN" };
-                                    foreach (var c in cabeceras)
-                                        table.Cell().Background(QuestPDF.Helpers.Colors.Blue.Darken4).Padding(5).Text(c).FontColor(QuestPDF.Helpers.Colors.White).Bold().FontSize(9);
-
-                                    bool alternate = false;
-                                    foreach (DataRow fila in dt.Rows)
-                                    {
-                                        var bgColor = alternate ? QuestPDF.Helpers.Colors.Grey.Lighten4 : QuestPDF.Helpers.Colors.White;
-                                        table.Cell().Background(bgColor).BorderBottom(1).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten3).Padding(4).Text(fila["Matricula"].ToString()).FontSize(8);
-                                        table.Cell().Background(bgColor).BorderBottom(1).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten3).Padding(4).Text(fila["NombreCompleto"].ToString()).FontSize(8);
-                                        table.Cell().Background(bgColor).BorderBottom(1).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten3).Padding(4).Text(fila["Jefatura"].ToString()).FontSize(8);
-                                        table.Cell().Background(bgColor).BorderBottom(1).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten3).Padding(4).Text(fila["HoraEntrada"].ToString()).FontSize(8);
-                                        
-                                        string sit = fila["Situacion"].ToString();
-                                        var sitColor = sit == "PRESENTE" ? QuestPDF.Helpers.Colors.Green.Darken2 : (sit == "FALTISTA" ? QuestPDF.Helpers.Colors.Red.Darken2 : QuestPDF.Helpers.Colors.Orange.Darken3);
-                                        table.Cell().Background(bgColor).BorderBottom(1).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten3).Padding(4).Text(sit).FontColor(sitColor).Bold().FontSize(8);
-                                        
-                                        alternate = !alternate;
-                                    }
-                                });
-
-                                col.Item().PaddingTop(20).Text("RESUMEN OPERATIVO:").Bold().FontSize(11);
-                                col.Item().Text(_resumenActual).FontSize(10);
-                            });
-
-                            page.Footer().PaddingTop(20).AlignCenter().Column(col =>
-                            {
-                                col.Item().AlignCenter().Text("___________________________________________________").Bold();
-                                col.Item().AlignCenter().Text($"VALIDADO MEDIANTE FIRMA BIOMÉTRICA POR:").FontSize(8);
-                                col.Item().AlignCenter().Text(autorizador.ToUpper()).FontSize(10).Bold();
-                                col.Item().AlignCenter().PaddingTop(5).Text(x => {
-                                    x.Span("Generado el: " + DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss")).FontSize(8).FontColor(QuestPDF.Helpers.Colors.Grey.Medium);
-                                });
+                        page.Footer().PaddingTop(20).AlignCenter().Column(col =>
+                        {
+                            col.Item().AlignCenter().Text("___________________________________________________").Bold();
+                            col.Item().AlignCenter().Text($"VALIDADO MEDIANTE FIRMA BIOMÉTRICA POR:").FontSize(8);
+                            col.Item().AlignCenter().Text(autorizador.ToUpper()).FontSize(10).Bold();
+                            col.Item().AlignCenter().PaddingTop(5).Text(x => {
+                                // USAMOS LA VARIABLE DE FECHA DE IMPRESIÓN
+                                x.Span("Generado el: " + fechaImpresion).FontSize(8).FontColor(QuestPDF.Helpers.Colors.Grey.Medium);
                             });
                         });
-                    }).GeneratePdf(dlg.FileName);
+                    });
+                }).GeneratePdf(rutaArchivo);
+            });
 
-                    RegistrarEnHistorial(dlg.FileName, autorizador);
-                    MessageBox.Show($"PDF exportado y sellado exitosamente por {autorizador}.", "Autorizado", MessageBoxButton.OK, MessageBoxImage.Information);
+            // ====================================================================
+            // FASE 3: RETORNO AL HILO DE LA INTERFAZ
+            // Terminó el PDF, actualizamos la base de datos y limpiamos la pantalla.
+            // ====================================================================
+            RegistrarEnHistorial(rutaArchivo, autorizador);
+            MessageBox.Show($"PDF exportado y sellado exitosamente por {autorizador}.", "Autorizado", MessageBoxButton.OK, MessageBoxImage.Information);
 
-                    txtObservacionesCorte.Text = ""; _registroAuditoriaInalterable = ""; txtAuditoriaSistema.Text = "";
-                }
-                catch (Exception ex) { MessageBox.Show("Error al estructurar el PDF: " + ex.Message, "Error QuestPDF", MessageBoxButton.OK, MessageBoxImage.Error); }
-            }
+            txtObservacionesCorte.Text = ""; 
+            _registroAuditoriaInalterable = ""; 
+            txtAuditoriaSistema.Text = "";
         }
-
+        catch (Exception ex) 
+        { 
+            MessageBox.Show("Error al estructurar el PDF: " + ex.Message, "Error QuestPDF", MessageBoxButton.OK, MessageBoxImage.Error); 
+        }
+    }
+        }
         // =========================================================
         // --- 5. ARCHIVO HISTÓRICO Y AUTO-SANACIÓN DE RUTAS ---
         // =========================================================

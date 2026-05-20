@@ -42,7 +42,7 @@
                 <StackPanel>
                     <TextBlock Text="📊 Carga Masiva (Excel)" FontSize="18" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,10"/>
                     <TextBlock Text="Importa novedades o personal desde una plantilla de Excel. (Módulo en construcción)." TextWrapping="Wrap" Foreground="#64748B" Margin="0,0,0,20" Height="60"/>
-                    <Button Content="Configurar Carga" Background="#94A3B8" Foreground="White" FontWeight="Bold" Padding="15,12" IsEnabled="False">
+                    <Button Content="Modulo a desarollar" Background="#94A3B8" Foreground="White" FontWeight="Bold" Padding="15,12" IsEnabled="False">
                         <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="8"/></Style></Button.Resources>
                     </Button>
                 </StackPanel>

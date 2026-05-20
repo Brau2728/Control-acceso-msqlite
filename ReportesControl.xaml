@@ -204,13 +204,39 @@
                     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
                     <Border Grid.Row="0" Background="#F3F4F6" CornerRadius="12" Margin="0,0,0,20" Padding="20">
                         <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            
                             <StackPanel Margin="0,0,20,10">
                                 <TextBlock Text="Mes y Año a Evaluar:" FontWeight="Bold" Margin="0,0,0,5"/>
                                 <DatePicker x:Name="dpConcentradoMes" Width="180" Height="38" VerticalContentAlignment="Center"/>
                             </StackPanel>
-                            <Button Content="📊 Generar Desglose Analítico" Background="#8B5CF6" Foreground="White" FontWeight="Bold" Height="38" Padding="20,0" Margin="0,15,0,0" Click="BtnGenerarConcentrado_Click">
+                            
+                            <Button Content="📊 Generar Desglose Analítico" Background="#8B5CF6" Foreground="White" FontWeight="Bold" Height="38" Padding="20,0" Margin="0,15,10,0" Click="BtnGenerarConcentrado_Click">
                                 <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="6"/></Style></Button.Resources>
                             </Button>
+
+                            <Button Content="🟢 Exportar a Excel" Background="#16A34A" Foreground="White" FontWeight="Bold" Height="38" Padding="20,0" Margin="0,15,20,0" Click="BtnExportarConcentradoExcel_Click">
+                                <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="6"/></Style></Button.Resources>
+                            </Button>
+
+                            <Border Background="White" CornerRadius="8" Padding="15,5" Margin="0,15,0,0" BorderBrush="#E2E8F0" BorderThickness="1">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="Simbología:" FontWeight="Bold" Margin="0,0,15,0" VerticalAlignment="Center" Foreground="#475569"/>
+                                    
+                                    <Border Background="#D1FAE5" CornerRadius="4" Padding="8,4" Margin="0,0,10,0">
+                                        <TextBlock Text="P: Presente" Foreground="#065F46" FontWeight="Bold" FontSize="11"/>
+                                    </Border>
+                                    <Border Background="#FEF3C7" CornerRadius="4" Padding="8,4" Margin="0,0,10,0">
+                                        <TextBlock Text="R: Retardo" Foreground="#B45309" FontWeight="Bold" FontSize="11"/>
+                                    </Border>
+                                    <Border Background="#FEE2E2" CornerRadius="4" Padding="8,4" Margin="0,0,10,0">
+                                        <TextBlock Text="F: Falta" Foreground="#991B1B" FontWeight="Bold" FontSize="11"/>
+                                    </Border>
+                                    <Border Background="#DBEAFE" CornerRadius="4" Padding="8,4" Margin="0,0,0,0">
+                                        <TextBlock Text="V/C/N: Vacaciones/Comisión/Médico" Foreground="#1E40AF" FontWeight="Bold" FontSize="11"/>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+                            
                         </WrapPanel>
                     </Border>
                     <Border Grid.Row="1" CornerRadius="12" Background="White" ClipToBounds="True">
